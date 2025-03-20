@@ -1,7 +1,6 @@
 import dotenv from "dotenv"
 dotenv.config()
 
-import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import OpenAI from "openai"
@@ -19,11 +18,11 @@ const username = args[0] || "degenspartan"
 const date = args[1] || new Date().toISOString().split("T")[0]
 console.log(`Generating character for ${username} on ${date}`)
 
-const stats = JSON.parse(fs.readFileSync(path.join(__dirname, `../../pipeline/${username}/${date}/analytics/stats.json`), "utf8"))
-const tweets = JSON.parse(fs.readFileSync(path.join(__dirname, `../../pipeline/${username}/${date}/raw/tweets.json`), "utf8"))
-const recentTweets = tweets.slice(0, 200)
-const recentTweetsText = recentTweets.map((tweet) => tweet.text).join("\n")
-const topTweets = stats.engagement.topTweets.map((tweet) => tweet.text).join("\n")
+// const stats = JSON.parse(fs.readFileSync(path.join(__dirname, `../../pipeline/${username}/${date}/analytics/stats.json`), "utf8"))
+// const tweets = JSON.parse(fs.readFileSync(path.join(__dirname, `../../pipeline/${username}/${date}/raw/tweets.json`), "utf8"))
+// const recentTweets = tweets.slice(0, 200)
+// const recentTweetsText = recentTweets.map((tweet) => tweet.text).join("\n")
+// const topTweets = stats.engagement.topTweets.map((tweet) => tweet.text).join("\n")
 
 const pipeline = new TwitterPipeline(username)
 

@@ -601,7 +601,7 @@ class TwitterPipeline {
 
       // Save collected data
       Logger.startSpinner("Processing and saving data")
-      const analytics = await this.dataOrganizer.saveTweets(allTweets)
+      // const analytics = await this.dataOrganizer.saveTweets(allTweets)
 
       Logger.stopSpinner()
 
