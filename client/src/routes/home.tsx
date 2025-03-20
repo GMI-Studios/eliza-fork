@@ -9,15 +9,34 @@ import { NavLink } from "react-router"
 import type { UUID } from "@elizaos/core"
 import { formatAgentName } from "@/lib/utils"
 
+interface Tweet {
+  id: string
+  text: string
+  username: string
+  timestamp: number
+  createdAt: string
+  isReply: boolean
+  isRetweet: boolean
+  likes: number
+  retweetCount: number
+  replies: number
+  photos: Array<{ id: string; url: string }>
+  videos: Array<{ id: string; preview: string; url: string }>
+  urls: string[]
+  permanentUrl: string
+  hashtags: string[]
+  inReplyToStatusId?: string
+  quotedStatusId?: string
+}
+
 export default function Home() {
   const [twitterHandle, setTwitterHandle] = useState("")
   const [loading, setLoading] = useState(false)
-  const [description, setDescription] = useState("")
+  const [tweets, setTweets] = useState<string[]>([])
 
   const query = useQuery({
     queryKey: ["agents"],
     queryFn: () => apiClient.getAgents(),
-    refetchInterval: 5_000,
   })
 
   const agents = query?.data?.agents
@@ -25,16 +44,8 @@ export default function Home() {
   const handleGenerateAgent = async () => {
     setLoading(true)
     try {
-      // Replace this with your actual API call to fetch tweets and generate description
-      const response = await fetch(`/api/generate-agent`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ twitterHandle }),
-      })
-      const data = await response.json()
-      setDescription(data.description)
+      const data = await apiClient.fetchTwitterDescription(twitterHandle)
+      setTweets(data.tweets.map((tweet: Tweet) => tweet.text))
     } catch (error) {
       console.error("Error generating agent:", error)
     } finally {
@@ -60,11 +71,16 @@ export default function Home() {
         >
           {loading ? "Generating..." : "Generate Agent"}
         </Button>
-        {description && (
-          <div className='mt-2 p-2 border rounded'>
-            <strong>Description:</strong> {description}
+      </div>
+      <div className='tweets-container p-4 border rounded'>
+        {tweets.map((tweet) => (
+          <div
+            key={tweet}
+            className='tweet p-2 mb-2 border-b'
+          >
+            {tweet}
           </div>
-        )}
+        ))}
       </div>
 
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>

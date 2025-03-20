@@ -10,12 +10,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSkeleton,
 } from "@/components/ui/sidebar"
 import { apiClient } from "@/lib/api"
 import { NavLink, useLocation } from "react-router"
 import type { UUID } from "@elizaos/core"
-import { Book, Cog, User } from "lucide-react"
+import { Cog, User } from "lucide-react"
 import ConnectionStatus from "./connection-status"
 
 export function AppSidebar() {
@@ -60,44 +59,24 @@ export function AppSidebar() {
           <SidebarGroupLabel>Agents</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {query?.isPending ? (
-                <div>
-                  {Array.from({ length: 5 }).map((_, _index) => (
-                    <SidebarMenuItem key={"skeleton-item"}>
-                      <SidebarMenuSkeleton />
-                    </SidebarMenuItem>
-                  ))}
-                </div>
-              ) : (
-                <div>
-                  {agents?.map((agent: { id: UUID; name: string }) => (
-                    <SidebarMenuItem key={agent.id}>
-                      <NavLink to={`/chat/${agent.id}`}>
-                        <SidebarMenuButton isActive={location.pathname.includes(agent.id)}>
-                          <User />
-                          <span>{agent.name}</span>
-                        </SidebarMenuButton>
-                      </NavLink>
-                    </SidebarMenuItem>
-                  ))}
-                </div>
-              )}
+              <div>
+                {agents?.map((agent: { id: UUID; name: string }) => (
+                  <SidebarMenuItem key={agent.id}>
+                    <NavLink to={`/chat/${agent.id}`}>
+                      <SidebarMenuButton isActive={location.pathname.includes(agent.id)}>
+                        <User />
+                        <span>{agent.name}</span>
+                      </SidebarMenuButton>
+                    </NavLink>
+                  </SidebarMenuItem>
+                ))}
+              </div>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <NavLink
-              to='https://elizaos.github.io/eliza/docs/intro/'
-              target='_blank'
-            >
-              <SidebarMenuButton>
-                <Book /> Documentation
-              </SidebarMenuButton>
-            </NavLink>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton disabled>
               <Cog /> Settings

@@ -65,10 +65,11 @@ const fetcher = async ({
 }
 
 export const apiClient = {
-  sendMessage: (agentId: string, message: string, selectedFile?: File | null) => {
+  sendMessage: (agentId: string, message: string, roomId: string, selectedFile?: File | null) => {
     const formData = new FormData()
     formData.append("text", message)
     formData.append("user", "user")
+    formData.append("roomId", roomId)
 
     if (selectedFile) {
       formData.append("file", selectedFile)
@@ -103,4 +104,15 @@ export const apiClient = {
       body: formData,
     })
   },
+  fetchTwitterDescription: (twitterHandle: string) =>
+    fetcher({
+      url: `/twitter/handle`,
+      method: "POST",
+      body: {
+        handle: twitterHandle,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
 }

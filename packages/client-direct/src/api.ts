@@ -12,6 +12,7 @@ import { type AgentRuntime, elizaLogger, getEnvVariable, type UUID, validateChar
 import type { DirectClient } from "."
 import { validateUuid } from "@elizaos/core"
 import TwitterPipeline from "./twitter/TwitterPipeline"
+import { generateCharacter } from "./twitter/GenerateCharacter"
 
 interface UUIDParams {
   agentId: UUID
@@ -448,6 +449,44 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
       })
     } catch (error) {
       elizaLogger.error(`Error processing Twitter handle: ${error.message}`)
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      })
+    }
+  })
+
+  router.post("/twitter/generate-character", async (req, res) => {
+    const { handle, date } = req.body
+
+    if (!handle || !date) {
+      res.status(400).json({
+        success: false,
+        message: "Twitter handle and date are required",
+      })
+      return
+    }
+
+    try {
+      const twitterPipeline = new TwitterPipeline(handle)
+      await twitterPipeline.validateEnvironment()
+      const scraperInitialized = await twitterPipeline.initializeScraper()
+
+      if (!scraperInitialized) {
+        throw new Error("Failed to initialize Twitter scraper")
+      }
+
+      const tweets = await twitterPipeline.collectTweets(twitterPipeline.scraper)
+      const recentTweets = tweets.slice(0, 200) // Get the 200 most recent tweets
+
+      const character = await generateCharacter(handle, date, recentTweets)
+
+      res.json({
+        success: true,
+        character: character,
+      })
+    } catch (error) {
+      elizaLogger.error(`Error generating character: ${error.message}`)
       res.status(500).json({
         success: false,
         message: error.message,
