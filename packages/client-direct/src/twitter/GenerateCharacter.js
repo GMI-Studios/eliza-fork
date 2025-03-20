@@ -5,7 +5,7 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import OpenAI from "openai"
-import TwitterPipeline from "./twitter/TwitterPipeline.js"
+import TwitterPipeline from "./TwitterPipeline.js"
 import chalk from "chalk"
 import ora from "ora"
 
