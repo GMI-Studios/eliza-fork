@@ -381,7 +381,14 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
     try {
       let character: Character
       if (characterJson) {
-        character = await directClient.jsonToCharacter(characterPath, characterJson)
+        const baseCharacter = {
+          modelProvider: "openai",
+          clients: ["direct"],
+          modelConfig: {},
+          settings: {},
+          plugins: [],
+        }
+        character = await directClient.jsonToCharacter(characterPath, { ...baseCharacter, ...characterJson })
       } else if (characterPath) {
         character = await directClient.loadCharacterTryPath(characterPath)
       } else {
@@ -392,7 +399,7 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
 
       res.json({
         id: character.id,
-        character: character,
+        // character: character,
       })
     } catch (e) {
       elizaLogger.error(`Error parsing character: ${e}`)
@@ -469,11 +476,18 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
     }
 
     try {
+      const baseCharacter = {
+        modelProvider: "openai",
+        clients: ["direct"],
+        modelConfig: {},
+        settings: {},
+        plugins: [],
+      }
       const character = await generateCharacter(username, tweets, profile)
-
+      const finalCharacter = { ...baseCharacter, ...character }
       res.json({
         success: true,
-        character: character,
+        character: finalCharacter,
       })
     } catch (error) {
       elizaLogger.error(`Error generating character: ${error.message}`)
