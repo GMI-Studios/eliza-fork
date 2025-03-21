@@ -531,7 +531,6 @@ class TwitterPipeline {
         }`
       )
 
-      const profile = await this.getProfile()
       return { profile, tweets: Array.from(allTweets.values()) }
     } catch (error) {
       Logger.error(`Failed to collect tweets: ${error.message}`)

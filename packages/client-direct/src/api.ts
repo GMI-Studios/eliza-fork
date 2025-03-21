@@ -458,7 +458,7 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
   })
 
   router.post("/twitter/generate-character", async (req, res) => {
-    const { username, tweets } = req.body
+    const { username, tweets, profile } = req.body
 
     if (!username || !tweets) {
       res.status(400).json({
@@ -469,7 +469,7 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
     }
 
     try {
-      const character = await generateCharacter(username, tweets)
+      const character = await generateCharacter(username, tweets, profile)
 
       res.json({
         success: true,
