@@ -441,7 +441,7 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
       }
 
       const tweets = await twitterPipeline.collectTweets(twitterPipeline.scraper)
-      const recentTweets = tweets.slice(0, 20) // Get the 20 most recent tweets
+      const recentTweets = tweets.slice(0, 20)
 
       res.json({
         success: true,
@@ -457,29 +457,18 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
   })
 
   router.post("/twitter/generate-character", async (req, res) => {
-    const { handle, date } = req.body
+    const { username, tweets } = req.body
 
-    if (!handle || !date) {
+    if (!username || !tweets) {
       res.status(400).json({
         success: false,
-        message: "Twitter handle and date are required",
+        message: "Username and tweets are required",
       })
       return
     }
 
     try {
-      const twitterPipeline = new TwitterPipeline(handle)
-      await twitterPipeline.validateEnvironment()
-      const scraperInitialized = await twitterPipeline.initializeScraper()
-
-      if (!scraperInitialized) {
-        throw new Error("Failed to initialize Twitter scraper")
-      }
-
-      const tweets = await twitterPipeline.collectTweets(twitterPipeline.scraper)
-      const recentTweets = tweets.slice(0, 200) // Get the 200 most recent tweets
-
-      const character = await generateCharacter(handle, date, recentTweets)
+      const character = await generateCharacter(username, tweets)
 
       res.json({
         success: true,

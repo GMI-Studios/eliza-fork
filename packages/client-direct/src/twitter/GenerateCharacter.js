@@ -59,8 +59,8 @@ const formatJSON = (json) => {
     .join("\n")
 }
 
-export async function generateCharacter(username, date, tweets) {
-  console.log(`Generating character for ${username} on ${date}`)
+export async function generateCharacter(username, tweets) {
+  console.log(`Generating character for ${username}`)
 
   const prompt = `You are tasked with creating a detailed character card based on a user's Twitter profile and tweets. This character card will be used to generate AI responses that mimic the user's personality and writing style. Your goal is to create a comprehensive and accurate representation of the user as a fictional character.
 
