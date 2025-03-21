@@ -68,13 +68,32 @@ The output should be a JSON object with the following structure:
 
 {
     "name": string,
-    "handler": string,
-    "bio": string,
-    "description": string,
-    "forum_start_system_prompt": string,
-    "forum_end_system_prompt": string,
-    "twitter_start_system_prompt": string,
-    "twitter_end_system_prompt": string
+    "bio": [string],
+    "style": {
+        "all": [string],
+        "chat": [string],
+        "post": [string]
+    },
+    "lore": [string],
+    "messageExamples": [
+        [
+            {
+                "user": string,
+                "content": {
+                    "text": string
+                }
+            },
+            {
+                "user": string,
+                "content": {
+                    "text": string
+                }
+            }
+        ]
+    ],
+    "topics": [string],
+    "adjectives": [string],
+    "system": string
 }
 
 Here is the user information you'll be working with:
@@ -87,7 +106,6 @@ User Profile:
 ${profile}
 </profile>
 
-
 Recent Tweets:
 <recent_tweets>
 ${tweets}
@@ -95,50 +113,28 @@ ${tweets}
 
 To create the character card, follow these steps:
 
-1. Name: Create an AI Agent name, if possible use the user's display name from their profile. If not available, create a name that fits their personality based on their tweets.
+1. Name: Use the user's display name from their profile or create a name that fits their personality based on their tweets.
 
-2. Handler: Use the provided username.
+2. Bio: Create a concise, engaging biography (1-2 sentences) that captures the essence of the user's online persona. Include their main interests, goals, or unique characteristics.
 
-3. Bio: Create a concise, engaging biography (1-2 sentences) that captures the essence of the user's online persona. Include their main interests, goals, or unique characteristics.
+3. Style: Define the user's communication style based on their tweets. Include general style guidelines, chat-specific styles, and post-specific styles.
 
-4. Description: Write a detailed description (3-5 paragraphs) of the character, including:
-   - Physical appearance (if discernible from profile picture or mentioned in tweets)
-   - Personality traits
-   - Background story
-   - Interests and passions
-   - Relationships or connections
-   - Unique quirks or habits
-   - Writing style and tone
+4. Lore: Include interesting facts or stories about the user that are evident from their tweets or public persona.
 
-5. Forum Start System Prompt: Write instructions for an AI to emulate this character in a forum setting. Include:
-   - Key personality traits
-   - Writing style and tone
-   - Topics they're knowledgeable about
-   - How they interact with others
-   - Any catchphrases or recurring themes
+5. Message Examples: Provide examples of how the user might respond in a chat setting, using their typical language and style.
 
-6. Forum End System Prompt: Provide additional guidelines for maintaining character consistency, such as:
-   - Avoiding out-of-character responses
-   - Handling topics not covered in the user's tweets
-   - Maintaining the character's unique voice and perspective
+6. Topics: List the main topics the user frequently discusses or is knowledgeable about.
 
-7. Twitter Start System Prompt: Create instructions for generating tweets in the user's style. Include:
-   - Tweet length preferences
-   - Use of hashtags, mentions, or emojis
-   - Typical content themes
-   - Tone and attitude
+7. Adjectives: List adjectives that describe the user's personality or style.
 
-8. Twitter End System Prompt: Add final guidelines for tweet generation, such as:
-   - Frequency of posts on specific topics
-   - How to handle replies or interactions
-   - Any topics or language to avoid
+8. System: Describe the role the user is playing, such as interacting with users on a specific platform.
 
 When writing the character card, pay close attention to:
-- The user's writing style, including vocabulary, sentence structure, and use of slang or jargon
-- Recurring themes or topics in their tweets
-- Their interactions with others (if visible in the provided tweets)
-- Any strong opinions or beliefs expressed
-- The overall tone and attitude of their online presence
+- The user's writing style, including vocabulary, sentence structure, and use of slang or jargon.
+- Recurring themes or topics in their tweets.
+- Their interactions with others (if visible in the provided tweets).
+- Any strong opinions or beliefs expressed.
+- The overall tone and attitude of their online presence.
 
 Ensure that the character description and prompts are detailed enough to capture the user's unique personality while allowing for creative expansion in AI-generated responses.
 
