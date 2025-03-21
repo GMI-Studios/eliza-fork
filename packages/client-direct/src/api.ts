@@ -440,11 +440,12 @@ export function createApiRouter(agents: Map<string, IAgentRuntime>, directClient
         throw new Error("Failed to initialize Twitter scraper")
       }
 
-      const tweets = await twitterPipeline.collectTweets(twitterPipeline.scraper)
-      const recentTweets = tweets.slice(0, 20)
+      const { profile, tweets } = await twitterPipeline.collectTweets(twitterPipeline.scraper)
+      const recentTweets = tweets.slice(0, 40)
 
       res.json({
         success: true,
+        profile,
         tweets: recentTweets,
       })
     } catch (error) {
