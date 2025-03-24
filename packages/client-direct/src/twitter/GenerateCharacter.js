@@ -78,13 +78,13 @@ The output should be a JSON object with the following structure:
     "messageExamples": [
         [
             {
-                "user": string,
+                "user": "{{user1}}",
                 "content": {
                     "text": string
                 }
             },
             {
-                "user": string,
+                "user": "string",
                 "content": {
                     "text": string
                 }
@@ -157,7 +157,7 @@ Format your response as a valid JSON object, with each field containing the appr
     const formattedJson = formatJSON(responseJson)
     spinner.succeed("Character generated successfully!")
     console.log("\n" + chalk.cyan("Character Details:"))
-
+    console.log(formattedJson)
     return responseJson
   } catch (error) {
     spinner.fail("Failed to generate character")
