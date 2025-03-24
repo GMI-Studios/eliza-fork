@@ -91,6 +91,7 @@ The output should be a JSON object with the following structure:
             }
         ]
     ],
+    "postExamples": [string]
     "topics": [string],
     "adjectives": [string],
     "system": string
