@@ -65,4 +65,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the application
-CMD ["bun", "run", "start"] 
+CMD ["bun", "run", "start-cli"] 
