@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createUniqueUuid } from './entities';
-import { decryptSecret, getSalt } from './index';
+import { decryptSecret, getSalt, safeReplacer } from './index';
 import logger from './logger';
 import { splitChunks } from './prompts';
 // Import enums and values that are used as values
@@ -109,6 +109,7 @@ export class AgentRuntime implements IAgentRuntime {
   readonly evaluators: Evaluator[] = [];
   readonly providers: Provider[] = [];
   readonly plugins: Plugin[] = [];
+  private isInitialized = false;
   events: Map<string, ((params: any) => Promise<void>)[]> = new Map();
   stateCache = new Map<
     UUID,
@@ -200,7 +201,7 @@ export class AgentRuntime implements IAgentRuntime {
     }
 
     // Initialize the plugin if it has an init function
-    if (plugin.init) {
+    if (plugin && 'init' in plugin && plugin.init !== null && typeof plugin.init === 'function') {
       try {
         await plugin.init(plugin.config || {}, this);
         this.runtimeLogger.debug(`Success: Plugin ${plugin.name} initialized successfully`);
@@ -233,6 +234,11 @@ export class AgentRuntime implements IAgentRuntime {
     if (plugin.adapter) {
       this.runtimeLogger.debug(`Registering database adapter for plugin ${plugin.name}`);
       this.registerDatabaseAdapter(plugin.adapter);
+      this.runtimeLogger.debug(
+        `Database adapter registered successfully for plugin ${plugin.name}`
+      );
+    } else {
+      this.runtimeLogger.debug(`Plugin ${plugin.name} does not provide a database adapter`);
     }
 
     // Register plugin actions
@@ -280,9 +286,13 @@ export class AgentRuntime implements IAgentRuntime {
     }
 
     if (plugin.services) {
-      plugin.services.forEach((service) => {
-        this.servicesInitQueue.add(service);
-      });
+      for (const service of plugin.services) {
+        if (this.isInitialized) {
+          await this.registerService(service);
+        } else {
+          this.servicesInitQueue.add(service);
+        }
+      }
     }
   }
 
@@ -301,6 +311,11 @@ export class AgentRuntime implements IAgentRuntime {
   }
 
   async initialize() {
+    if (this.isInitialized) {
+      this.runtimeLogger.warn('Agent already initialized');
+      return;
+    }
+
     // Track registered plugins to avoid duplicates
     const registeredPluginNames = new Set<string>();
 
@@ -315,7 +330,24 @@ export class AgentRuntime implements IAgentRuntime {
       }
     }
 
-    await this.adapter.init();
+    // Ensure adapter is initialized
+    if (!this.adapter) {
+      this.runtimeLogger.error(
+        'Database adapter not initialized. Make sure @elizaos/plugin-sql is included in your plugins.'
+      );
+      throw new Error(
+        'Database adapter not initialized. The SQL plugin (@elizaos/plugin-sql) is required for agent initialization. Please ensure it is included in your character configuration.'
+      );
+    }
+
+    try {
+      await this.adapter.init();
+    } catch (error) {
+      this.runtimeLogger.error(
+        `Failed to initialize database adapter: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    }
 
     // First create the agent entity directly
     try {
@@ -419,6 +451,8 @@ export class AgentRuntime implements IAgentRuntime {
     for (const service of this.servicesInitQueue) {
       await this.registerService(service);
     }
+
+    this.isInitialized = true;
   }
 
   private async handleProcessingError(error: any, context: string) {
@@ -1276,7 +1310,10 @@ export class AgentRuntime implements IAgentRuntime {
     }
 
     // Log input parameters
-    this.runtimeLogger.debug(`[useModel] ${modelKey} input:`, JSON.stringify(params, null, 2));
+    this.runtimeLogger.debug(
+      `[useModel] ${modelKey} input:`,
+      JSON.stringify(params, safeReplacer(), 2)
+    );
 
     // Handle different parameter formats
     let paramsWithRuntime: any;
@@ -1328,7 +1365,27 @@ export class AgentRuntime implements IAgentRuntime {
       body: {
         modelType,
         modelKey,
-        params: params ? (typeof params === 'object' ? Object.keys(params) : typeof params) : null,
+        params: (() => {
+          if (params === null || params === undefined) {
+            return null;
+          }
+          // Handle Node.js Buffer
+          if (typeof Buffer !== 'undefined' && Buffer.isBuffer(params)) {
+            return `[Audio Buffer (${params.length} bytes)]`;
+          }
+          // Handle TypedArrays (Uint8Array, Float32Array, etc.)
+          if (ArrayBuffer.isView(params)) {
+            // Use constructor name for TypedArray type (e.g., 'Uint8Array')
+            // Use 'length' for element count in TypedArrays
+            return `[Audio ${params.constructor.name} (${(params as any).length})]`;
+          }
+          // Handle other objects
+          if (typeof params === 'object') {
+            return Object.keys(params);
+          }
+          // Handle primitives
+          return typeof params;
+        })(),
         response:
           Array.isArray(response) && response.every((x) => typeof x === 'number')
             ? '[array]'
