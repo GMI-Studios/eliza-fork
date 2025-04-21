@@ -16,6 +16,7 @@ export function usePlugins() {
 
       // Temporarily return hardcoded plugins as an array
       return [
+        '@elizaos/plugin-openrouter',
         '@elizaos/plugin-bootstrap',
         '@elizaos/plugin-sql',
         '@elizaos/plugin-twitter',
