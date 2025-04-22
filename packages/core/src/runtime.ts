@@ -888,7 +888,7 @@ export class AgentRuntime implements IAgentRuntime {
     }
 
     if (!worldId && serverId) {
-      worldId = createUniqueUuid(this, serverId);
+      worldId = worldId; //createUniqueUuid(this, serverId);
     }
 
     const names = [name, userName].filter(Boolean);

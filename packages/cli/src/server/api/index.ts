@@ -1,5 +1,5 @@
 import type { IAgentRuntime, UUID } from '@elizaos/core';
-import { createUniqueUuid, logger as Logger, logger } from '@elizaos/core';
+import { logger as Logger, logger } from '@elizaos/core';
 import * as bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
@@ -103,9 +103,9 @@ export function setupSocketIO(
             logger.warn(`no message found`);
             continue;
           }
-          const entityId = createUniqueUuid(agentRuntime, senderId);
+          const entityId = senderId; //createUniqueUuid(agentRuntime, senderId);
 
-          const uniqueRoomId = createUniqueUuid(agentRuntime, socketRoomId);
+          const uniqueRoomId = socketRoomId; //createUniqueUuid(agentRuntime, socketRoomId);
           const source = payload.source;
           try {
             // Ensure connection between entity and room (just like Discord)

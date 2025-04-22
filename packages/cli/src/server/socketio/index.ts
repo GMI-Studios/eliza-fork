@@ -181,7 +181,7 @@ export class SocketIORouter {
       }
 
       // Create a properly typed room UUID for use in processing
-      const typedRoomId = createUniqueUuid(runtime, roomId);
+      const typedRoomId = roomId; //createUniqueUuid(runtime, roomId);
 
       await this.processMessageForRecipients(socket, socketsInRoom, {
         senderId,
@@ -274,8 +274,8 @@ export class SocketIORouter {
 
     try {
       // Generate proper UUIDs
-      const uniqueRoomId = createUniqueUuid(runtime, roomId);
-      const entityId = createUniqueUuid(runtime, senderId);
+      const uniqueRoomId = roomId; //createUniqueUuid(runtime, roomId);
+      const entityId = senderId as UUID; //createUniqueUuid(runtime, senderId);
 
       // Ensure connection for entity
       try {
