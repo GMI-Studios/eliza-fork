@@ -62,17 +62,68 @@ export function setupSocketIO(
   io.on('connection', (socket) => {
     const { agentId, roomId } = socket.handshake.query as { agentId: string; roomId: string };
 
-    logger.debug('Socket connected', { agentId, roomId, socketId: socket.id });
+    logger.info('New WebSocket connection attempt', {
+      socketId: socket.id,
+      agentId,
+      roomId,
+      clientIp: socket.handshake.address,
+      userAgent: socket.handshake.headers['user-agent'],
+      transport: socket.conn.transport.name,
+    });
+
+    // Log transport changes
+    socket.conn.on('upgrade', (transport) => {
+      logger.info('Transport upgraded', {
+        socketId: socket.id,
+        agentId,
+        roomId,
+        from: socket.conn.transport.name,
+        to: transport.name,
+      });
+    });
+
+    // Log transport errors
+    socket.conn.on('error', (error) => {
+      logger.error('Transport error', {
+        socketId: socket.id,
+        agentId,
+        roomId,
+        error: error.message,
+        transport: socket.conn.transport.name,
+      });
+    });
+
+    // Log connection state changes
+    socket.conn.on('close', (reason) => {
+      logger.info('Connection closed', {
+        socketId: socket.id,
+        agentId,
+        roomId,
+        reason,
+        transport: socket.conn.transport.name,
+      });
+    });
 
     // Join the specified room
     if (roomId) {
       socket.join(roomId);
-      logger.debug(`Socket ${socket.id} joined room ${roomId}`);
+      logger.info(`Socket ${socket.id} joined room ${roomId}`, {
+        socketId: socket.id,
+        roomId,
+        agentId,
+        transport: socket.conn.transport.name,
+      });
     }
 
     // Handle messages from clients
     socket.on('message', async (messageData) => {
-      logger.debug('Socket message received', { messageData, socketId: socket.id });
+      logger.debug('Socket message received', {
+        messageData,
+        socketId: socket.id,
+        roomId,
+        agentId,
+        transport: socket.conn.transport.name,
+      });
 
       if (messageData.type === SOCKET_MESSAGE_TYPE.SEND_MESSAGE) {
         const payload = messageData.payload;
@@ -107,6 +158,12 @@ export function setupSocketIO(
 
           const uniqueRoomId = socketRoomId; //createUniqueUuid(agentRuntime, socketRoomId);
           const source = payload.source;
+          logger.debug('Handling message', {
+            entityId,
+            uniqueRoomId,
+            worldId,
+            payload,
+          });
           try {
             // Ensure connection between entity and room (just like Discord)
             await agentRuntime.ensureConnection({
@@ -282,8 +339,16 @@ export function setupSocketIO(
     });
 
     // Handle disconnections
-    socket.on('disconnect', () => {
-      logger.debug('Socket disconnected', { socketId: socket.id });
+    socket.on('disconnect', (reason) => {
+      logger.info('Socket disconnected', {
+        socketId: socket.id,
+        agentId,
+        roomId,
+        reason,
+        transport: socket.conn.transport.name,
+        wasConnected: socket.connected,
+        wasDisconnected: socket.disconnected,
+      });
       // Note: We're not removing agents from rooms on disconnect
       // as they should remain participants even when not connected
     });

@@ -144,7 +144,11 @@ class SocketIOManager extends EventAdapter {
     });
 
     this.socket.on('connect', () => {
-      clientLogger.info('[SocketIO] Connected to server');
+      clientLogger.info('[SocketIO] Connected to server', {
+        transport: this.socket?.io.engine?.transport?.name,
+        id: this.socket?.id,
+        url: fullURL,
+      });
       this.isConnected = true;
       this.resolveConnect?.();
 
@@ -215,8 +219,47 @@ class SocketIOManager extends EventAdapter {
       this.emit('messageComplete', data);
     });
 
+    this.socket.on('connect_error', (error) => {
+      clientLogger.error('[SocketIO] Connection error:', {
+        error: error instanceof Error ? error.message : String(error),
+        transport: this.socket?.io.engine?.transport?.name,
+        url: fullURL,
+        details: error,
+      });
+    });
+
+    this.socket.on('reconnect_attempt', (attemptNumber) => {
+      clientLogger.info('[SocketIO] Reconnection attempt', {
+        attempt: attemptNumber,
+        transport: this.socket?.io.engine?.transport?.name,
+      });
+    });
+
+    this.socket.on('reconnect', (attemptNumber) => {
+      clientLogger.info('[SocketIO] Reconnected successfully', {
+        attempt: attemptNumber,
+        transport: this.socket?.io.engine?.transport?.name,
+      });
+    });
+
+    this.socket.on('reconnect_error', (error) => {
+      clientLogger.error('[SocketIO] Reconnection error:', {
+        error: error.message,
+        transport: this.socket?.io.engine?.transport?.name,
+        details: error,
+      });
+    });
+
+    this.socket.on('reconnect_failed', () => {
+      clientLogger.error('[SocketIO] Reconnection failed after all attempts');
+    });
+
     this.socket.on('disconnect', (reason) => {
-      clientLogger.info(`[SocketIO] Disconnected. Reason: ${reason}`);
+      clientLogger.info(`[SocketIO] Disconnected. Reason: ${reason}`, {
+        reason,
+        transport: this.socket?.io.engine?.transport?.name,
+        wasConnected: this.isConnected,
+      });
       this.isConnected = false;
 
       // Reset connect promise for next connection
@@ -229,8 +272,27 @@ class SocketIOManager extends EventAdapter {
       }
     });
 
-    this.socket.on('connect_error', (error) => {
-      clientLogger.error('[SocketIO] Connection error:', error);
+    // Log transport changes
+    this.socket.io.engine?.on('upgrade', (transport) => {
+      clientLogger.info('[SocketIO] Transport upgraded', {
+        from: this.socket?.io.engine?.transport?.name,
+        to: transport.name,
+      });
+    });
+
+    this.socket.io.engine?.on('close', (reason) => {
+      clientLogger.info('[SocketIO] Engine closed', {
+        reason,
+        transport: this.socket?.io.engine?.transport?.name,
+      });
+    });
+
+    this.socket.io.engine?.on('error', (error) => {
+      clientLogger.error('[SocketIO] Engine error', {
+        error: error,
+        transport: this.socket?.io.engine?.transport?.name,
+        details: error,
+      });
     });
   }
 

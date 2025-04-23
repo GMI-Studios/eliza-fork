@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { createUniqueUuid } from './entities';
 import { decryptSecret, getSalt, safeReplacer } from './index';
 import logger from './logger';
@@ -887,8 +887,9 @@ export class AgentRuntime implements IAgentRuntime {
       throw new Error('Agent should not connect to itself');
     }
 
-    if (!worldId && serverId) {
-      worldId = worldId; //createUniqueUuid(this, serverId);
+    if (!worldId && entityId) {
+      this.runtimeLogger.debug(`Creating worldId from entityId: ${serverId} ${entityId} ${roomId}`);
+      worldId = uuidv5(entityId, '123e4567-e89b-12d3-a456-426614174000') as UUID; //createUniqueUuid(this, serverId);
     }
 
     const names = [name, userName].filter(Boolean);
@@ -907,6 +908,7 @@ export class AgentRuntime implements IAgentRuntime {
 
       if (!entity) {
         // Try to create the entity
+        logger.debug('Entity not found', { entityId, roomId, serverId, worldId, userId });
         try {
           const success = await this.adapter.createEntity({
             id: entityId,
