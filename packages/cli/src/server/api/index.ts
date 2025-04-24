@@ -61,7 +61,7 @@ export function setupSocketIO(
   });
 
   // Add JWT middleware to verify socket connections
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
       logger.warn('Socket connection attempt without token', {
@@ -72,7 +72,7 @@ export function setupSocketIO(
     }
 
     try {
-      const user = verifyToken(token);
+      const user = await verifyToken(token);
       socket.handshake.auth.user = user;
       next();
     } catch (error) {
