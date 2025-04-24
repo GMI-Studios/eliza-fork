@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import type { AgentServer } from '..';
 import { upload } from '../loader';
+import { jwtAuthMiddleware } from '../middleware/auth';
 
 /**
  * Interface representing a custom request object that extends the express.Request interface.
@@ -390,7 +391,7 @@ export function agentRouter(
   });
 
   // Delete agent
-  router.delete('/:agentId', async (req, res) => {
+  router.delete('/:agentId', jwtAuthMiddleware, async (req, res) => {
     logger.debug(`[AGENT DELETE] Received request to delete agent with ID: ${req.params.agentId}`);
 
     const agentId = validateUuid(req.params.agentId);
@@ -535,7 +536,7 @@ export function agentRouter(
   });
 
   // Delete Memory
-  router.delete('/:agentId/memories/:memoryId', async (req, res) => {
+  router.delete('/:agentId/memories/:memoryId', jwtAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     const memoryId = validateUuid(req.params.memoryId);
 
@@ -622,7 +623,7 @@ export function agentRouter(
     });
   });
 
-  router.delete('/:agentId/logs/:logId', async (req, res) => {
+  router.delete('/:agentId/logs/:logId', jwtAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     const logId = validateUuid(req.params.logId);
     if (!agentId || !logId) {
@@ -1421,7 +1422,7 @@ export function agentRouter(
     }
   });
 
-  router.delete('/:agentId/rooms/:roomId', async (req, res) => {
+  router.delete('/:agentId/rooms/:roomId', jwtAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     if (!agentId) {
       res.status(400).json({
@@ -2045,7 +2046,7 @@ export function agentRouter(
     }
   });
 
-  router.post('/groups/:serverId', async (req, res) => {
+  router.post('/groups/:serverId', jwtAuthMiddleware, async (req, res) => {
     const serverId = validateUuid(req.params.serverId);
 
     const { name, worldId, source, metadata, agentIds = [] } = req.body;
@@ -2134,7 +2135,7 @@ export function agentRouter(
     });
   });
 
-  router.delete('/groups/:serverId', async (req, res) => {
+  router.delete('/groups/:serverId', jwtAuthMiddleware, async (req, res) => {
     const serverId = validateUuid(req.params.serverId);
     try {
       await db.deleteRoomsByServerId(serverId);

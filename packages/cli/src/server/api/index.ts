@@ -13,6 +13,8 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { worldRouter } from './world';
 import { envRouter } from './env';
+import { jwtAuthMiddleware } from '../middleware/auth';
+import { verifyToken } from '../../utils/auth';
 
 // Custom levels from @elizaos/core logger
 const LOG_LEVELS = {
@@ -56,6 +58,31 @@ export function setupSocketIO(
       origin: '*',
       methods: ['GET', 'POST'],
     },
+  });
+
+  // Add JWT middleware to verify socket connections
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      logger.warn('Socket connection attempt without token', {
+        socketId: socket.id,
+        clientIp: socket.handshake.address,
+      });
+      return next(new Error('Authentication token required'));
+    }
+
+    try {
+      const user = verifyToken(token);
+      socket.handshake.auth.user = user;
+      next();
+    } catch (error) {
+      logger.error('Token verification failed', {
+        socketId: socket.id,
+        error: error.message,
+        clientIp: socket.handshake.address,
+      });
+      return next(new Error('Invalid authentication token'));
+    }
   });
 
   // Handle socket connections
@@ -239,12 +266,14 @@ export function setupSocketIO(
 
                 logger.debug('Broadcasting data:', JSON.stringify(broadcastData));
 
+                sendToSocket(io, socket.id, 'messageBroadcast', broadcastData);
+
                 // Send to specific room first
-                io.to(socketRoomId).emit('messageBroadcast', broadcastData);
+                // io.to(socketRoomId).emit('messageBroadcast', broadcastData);
 
                 // Also send to all connected clients as a fallback
                 logger.debug('Also broadcasting to all clients as fallback');
-                io.emit('messageBroadcast', broadcastData);
+                // io.emit('messageBroadcast', broadcastData);
 
                 // Create memory for the response message (matching Discord's pattern)
                 const memory = {
@@ -357,6 +386,31 @@ export function setupSocketIO(
   return io;
 }
 
+// Add this function before the setupSocketIO function
+function sendToSocket(io: SocketIOServer, socketId: string, event: string, data: any) {
+  const socket = io.sockets.sockets.get(socketId);
+  if (!socket) {
+    logger.warn(`[SocketIO] Socket ${socketId} not found`);
+    return false;
+  }
+
+  logger.debug(`[SocketIO] Sending to socket ${socketId}:`, {
+    event,
+    data,
+    socketInfo: {
+      connected: socket.connected,
+      rooms: Array.from(socket.rooms),
+      handshake: {
+        agentId: socket.handshake.query.agentId,
+        roomId: socket.handshake.query.roomId,
+      },
+    },
+  });
+
+  socket.emit(event, data);
+  return true;
+}
+
 /**
  * Creates an API router with various endpoints and middleware.
  * @param {Map<UUID, IAgentRuntime>} agents - Map of agents with UUID as key and IAgentRuntime as value.
@@ -379,14 +433,13 @@ export function createApiRouter(
     })
   );
 
-  // Explicitly define the hello endpoint with strict JSON response
+  // Public routes that don't need authentication
   router.get('/hello', (_req, res) => {
     logger.info('Hello endpoint hit');
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({ message: 'Hello World!' }));
   });
 
-  // Add a basic API test endpoint that returns the agent count
   router.get('/status', (_req, res) => {
     logger.info('Status endpoint hit');
     res.setHeader('Content-Type', 'application/json');
@@ -399,8 +452,8 @@ export function createApiRouter(
     );
   });
 
-  // Check if the server is running
-  router.get('/ping', (_req, res) => {
+  // Protected routes below this point
+  router.get('/ping', jwtAuthMiddleware, (_req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(
       JSON.stringify({
@@ -602,11 +655,11 @@ export function createApiRouter(
 
   // Mount sub-routers
   router.use('/agents', agentRouter(agents, server));
-  router.use('/world', worldRouter(server));
-  router.use('/envs', envRouter());
-  router.use('/tee', teeRouter(agents));
+  router.use('/world', jwtAuthMiddleware, worldRouter(server));
+  router.use('/envs', jwtAuthMiddleware, envRouter());
+  router.use('/tee', jwtAuthMiddleware, teeRouter(agents));
 
-  router.get('/stop', (_req, res) => {
+  router.get('/stop', jwtAuthMiddleware, (_req, res) => {
     server.stop();
     logger.log(
       {
@@ -694,8 +747,8 @@ export function createApiRouter(
     }
   };
 
-  router.get('/logs', logsHandler);
-  router.post('/logs', logsHandler);
+  router.get('/logs', jwtAuthMiddleware, logsHandler);
+  router.post('/logs', jwtAuthMiddleware, logsHandler);
 
   // Handler for clearing logs
   const logsClearHandler = (_req, res) => {
@@ -722,12 +775,11 @@ export function createApiRouter(
       });
     }
   };
-
   // Add DELETE endpoint for clearing logs
-  router.delete('/logs', logsClearHandler);
+  router.delete('/logs', jwtAuthMiddleware, logsClearHandler);
 
   // Health check endpoints
-  router.get('/health', (_req, res) => {
+  router.get('/health', jwtAuthMiddleware, (_req, res) => {
     logger.log({ apiRoute: '/health' }, 'Health check route hit');
     const healthcheck = {
       status: 'OK',

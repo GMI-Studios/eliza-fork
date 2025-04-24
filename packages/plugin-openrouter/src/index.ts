@@ -400,7 +400,6 @@ export const openrouterPlugin: Plugin = {
       const model = getSmallModel(runtime);
 
       logger.log('generating text');
-      logger.log(prompt);
 
       const { text: openaiResponse } = await generateText({
         model: openai.languageModel(model),
