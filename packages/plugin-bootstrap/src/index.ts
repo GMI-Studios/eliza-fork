@@ -31,7 +31,6 @@ import {
 import { v4 } from 'uuid';
 import { choiceAction } from './actions/choice';
 import { followRoomAction } from './actions/followRoom';
-import { ignoreAction } from './actions/ignore';
 import { muteRoomAction } from './actions/muteRoom';
 import { noneAction } from './actions/none';
 import { replyAction } from './actions/reply';
@@ -796,7 +795,7 @@ export const bootstrapPlugin: Plugin = {
     replyAction,
     followRoomAction,
     unfollowRoomAction,
-    ignoreAction,
+    // ignoreAction,
     noneAction,
     muteRoomAction,
     unmuteRoomAction,

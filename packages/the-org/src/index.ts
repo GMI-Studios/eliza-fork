@@ -3,12 +3,6 @@ dotenv.config({ path: '../../.env' });
 
 // Use a more generic type definition since 'Project' or 'ProjectType' might not be exported
 import { logger } from '@elizaos/core';
-import communityManager from './communityManager';
-import devRel from './devRel';
-import investmentManager from './investmentManager';
-import liaison from './liaison';
-import projectManager from './projectManager';
-import socialMediaManager from './socialMediaManager';
 
 /**
  * Checks if all required environment variables for an agent are available
@@ -129,14 +123,7 @@ function hasRequiredEnvVars(agent: any): boolean {
 }
 
 // Filter agents based on available environment variables
-const availableAgents = [
-  devRel,
-  communityManager,
-  investmentManager,
-  liaison,
-  projectManager,
-  socialMediaManager,
-].filter(hasRequiredEnvVars);
+const availableAgents = [].filter(hasRequiredEnvVars);
 
 // Log the filtering results for clarity
 const totalAgents = 6; // Total number of agents defined

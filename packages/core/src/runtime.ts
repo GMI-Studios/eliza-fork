@@ -1534,6 +1534,15 @@ export class AgentRuntime implements IAgentRuntime {
     if (!entity.agentId) {
       entity.agentId = this.agentId;
     }
+
+    // Check if entity already exists
+    const existingEntity = await this.getEntityById(entity.id);
+    if (existingEntity) {
+      this.runtimeLogger.debug(`Entity ${entity.id} already exists, skipping creation`);
+      return true;
+    }
+
+    this.runtimeLogger.debug(`Creating new entity: ${entity.id}`);
     return await this.adapter.createEntity(entity);
   }
 

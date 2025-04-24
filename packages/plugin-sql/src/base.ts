@@ -14,20 +14,7 @@ import {
   type Log,
   logger,
 } from '@elizaos/core';
-import {
-  Column,
-  and,
-  cosineDistance,
-  count,
-  desc,
-  eq,
-  gte,
-  inArray,
-  lte,
-  or,
-  sql,
-  not,
-} from 'drizzle-orm';
+import { and, cosineDistance, count, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { v4 } from 'uuid';
 import { DIMENSION_MAP, type EmbeddingDimensionColumn } from './schema/embedding';
 import {
@@ -733,22 +720,33 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       try {
         return await this.db.transaction(async (tx) => {
-          await tx.insert(entityTable).values(entity);
-
-          logger.debug('Entity created successfully:', {
-            entity,
-          });
-
-          return true;
+          try {
+            await tx.insert(entityTable).values(entity);
+            return true;
+          } catch (error: any) {
+            // Check if it's a duplicate key error
+            if (error.message?.includes('duplicate key') || error.code === '23505') {
+              logger.debug('Entity already exists:', {
+                entityId: entity.id,
+                name: entity.metadata?.name,
+                agentId: entity.agentId,
+              });
+              return true;
+            }
+            throw error;
+          }
         });
-      } catch (error) {
-        logger.error('Error creating entity:', {
-          error: error instanceof Error ? error.message : String(error),
+      } catch (error: any) {
+        logger.error('Database transaction failed for entity creation:', {
           entityId: entity.id,
           name: entity.metadata?.name,
+          agentId: entity.agentId,
+          error: {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+          },
         });
-        // trace the error
-        logger.trace(error);
         return false;
       }
     });
@@ -769,6 +767,7 @@ export abstract class BaseDrizzleAdapter<
       const existingEntity = await this.getEntityById(entity.id);
 
       if (!existingEntity) {
+        logger.debug('Entity not found, creating entity ensureEntityExists');
         return await this.createEntity(entity);
       }
 

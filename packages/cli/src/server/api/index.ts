@@ -173,7 +173,7 @@ export function setupSocketIO(
               name: payload.senderName || 'User',
               source: 'client_chat',
               channelId: uniqueRoomId,
-              serverId: 'client-chat',
+              serverId: worldId,
               type: ChannelType.DM,
               worldId: worldId,
             });
