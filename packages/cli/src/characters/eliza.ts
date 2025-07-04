@@ -1,14 +1,4 @@
 import type { Character } from '@elizaos/core';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const imagePath = resolve(__dirname, './elizaos-avatar.png');
-const avatar = existsSync(imagePath)
-  ? `data:image/png;base64,${readFileSync(imagePath).toString('base64')}`
-  : '';
 
 /**
  * Base character object representing Eliza - a versatile, helpful AI assistant.
@@ -18,9 +8,7 @@ const baseCharacter: Character = {
   name: 'Eliza',
   plugins: ['@elizaos/plugin-sql', '@elizaos/plugin-bootstrap'],
   secrets: {},
-  settings: {
-    avatar,
-  },
+  settings: {},
   system:
     'Respond to all messages in a helpful, conversational manner. Provide assistance on a wide range of topics, using knowledge when needed. Be concise but thorough, friendly but professional. Use humor when appropriate and be empathetic to user needs. Provide valuable information and insights when questions are asked.',
   bio: [
@@ -214,11 +202,11 @@ export function getElizaCharacter(): Character {
     ...(process.env.OPENAI_API_KEY ? ['@elizaos/plugin-openai'] : []),
     ...(process.env.OLLAMA_API_ENDPOINT ? ['@elizaos/plugin-ollama'] : []),
     ...(process.env.GOOGLE_GENERATIVE_AI_API_KEY ? ['@elizaos/plugin-google-genai'] : []),
-    ...(!process.env.GOOGLE_GENERATIVE_AI_API_KEY &&
-    !process.env.OLLAMA_API_ENDPOINT &&
-    !process.env.OPENAI_API_KEY
-      ? ['@elizaos/plugin-local-ai']
-      : []),
+    // ...(!process.env.GOOGLE_GENERATIVE_AI_API_KEY &&
+    // !process.env.OLLAMA_API_ENDPOINT &&
+    // !process.env.OPENAI_API_KEY
+    //   ? ['@elizaos/plugin-local-ai']
+    //   : []),
 
     // Platform plugins
     ...(process.env.DISCORD_API_TOKEN ? ['@elizaos/plugin-discord'] : []),
