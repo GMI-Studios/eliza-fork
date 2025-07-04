@@ -24,7 +24,7 @@ COPY packages ./packages
 
 RUN bun install --no-cache
 
-RUN bun run build:no-client
+RUN bun run build
 
 FROM node:23.3.0-slim
 
