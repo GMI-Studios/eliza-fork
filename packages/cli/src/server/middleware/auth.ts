@@ -1,50 +1,38 @@
 import { Response, NextFunction } from 'express';
-import { verifyToken } from '../../utils/auth';
 import { logger } from '@elizaos/core';
 
-export async function jwtAuthMiddleware(req: any, res: Response, next: NextFunction): Promise<any> {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    logger.warn('API request without authorization header', {
+export async function secretKeyAuthMiddleware(
+  req: any,
+  res: Response,
+  next: NextFunction
+): Promise<any> {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey) {
+    logger.warn('API request without X-API-Key header', {
       path: req.path,
       method: req.method,
       ip: req.ip,
     });
-    return res.status(401).json({ error: 'Authorization header required' });
-  }
-
-  const token = authHeader.split(' ')[1]; // Bearer <token>
-  if (!token) {
-    logger.warn('API request with invalid authorization header format', {
-      path: req.path,
-      method: req.method,
-      ip: req.ip,
-    });
-    return res.status(401).json({ error: 'Invalid authorization header format' });
+    return res.status(401).json({ error: 'X-API-Key header required' });
   }
 
   try {
-    const user = await verifyToken(token);
-    const wallet = user.abstractWalletAddress;
-    if (wallet.toLocaleLowerCase() !== process.env.ADMIN_WALLET?.toLocaleLowerCase()) {
-      logger.warn('Unauthorized wallet access attempt', {
+    if (apiKey !== process.env.API_SECRET_KEY) {
+      logger.warn('Invalid API key', {
         path: req.path,
         method: req.method,
         ip: req.ip,
-        wallet,
       });
-      return res.status(403).json({ error: 'Unauthorized wallet' });
+      return res.status(403).json({ error: 'Invalid API key' });
     }
-    req.user = user; // Attach user to request
     next();
   } catch (error) {
-    logger.error('JWT verification failed', {
+    logger.error('API key verification failed', {
       path: req.path,
       method: req.method,
       ip: req.ip,
       error: error.message,
     });
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({ error: 'Authentication failed' });
   }
 }

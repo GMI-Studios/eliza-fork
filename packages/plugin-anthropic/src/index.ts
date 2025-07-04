@@ -2,7 +2,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 import type { ObjectGenerationParams, GenerateTextParams, Plugin } from '@elizaos/core';
 import { ModelType, logger } from '@elizaos/core';
 import { generateText } from 'ai';
-import { extractAndParseJSON, ExtractedJSON, ensureReflectionProperties } from './utils';
+import { extractAndParseJSON, ensureReflectionProperties } from './utils';
 
 /**
  * Plugin for Anthropic.

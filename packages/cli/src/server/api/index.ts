@@ -13,7 +13,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { worldRouter } from './world';
 import { envRouter } from './env';
-import { jwtAuthMiddleware } from '../middleware/auth';
+import { secretKeyAuthMiddleware } from '../middleware/auth';
 import { verifyToken } from '../../utils/auth';
 
 // Custom levels from @elizaos/core logger
@@ -453,7 +453,7 @@ export function createApiRouter(
   });
 
   // Protected routes below this point
-  router.get('/ping', jwtAuthMiddleware, (_req, res) => {
+  router.get('/ping', secretKeyAuthMiddleware, (_req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(
       JSON.stringify({
@@ -655,11 +655,11 @@ export function createApiRouter(
 
   // Mount sub-routers
   router.use('/agents', agentRouter(agents, server));
-  router.use('/world', jwtAuthMiddleware, worldRouter(server));
-  router.use('/envs', jwtAuthMiddleware, envRouter());
-  router.use('/tee', jwtAuthMiddleware, teeRouter(agents));
+  router.use('/world', secretKeyAuthMiddleware, worldRouter(server));
+  router.use('/envs', secretKeyAuthMiddleware, envRouter());
+  router.use('/tee', secretKeyAuthMiddleware, teeRouter(agents));
 
-  router.get('/stop', jwtAuthMiddleware, (_req, res) => {
+  router.get('/stop', secretKeyAuthMiddleware, (_req, res) => {
     server.stop();
     logger.log(
       {
@@ -747,8 +747,8 @@ export function createApiRouter(
     }
   };
 
-  router.get('/logs', jwtAuthMiddleware, logsHandler);
-  router.post('/logs', jwtAuthMiddleware, logsHandler);
+  router.get('/logs', secretKeyAuthMiddleware, logsHandler);
+  router.post('/logs', secretKeyAuthMiddleware, logsHandler);
 
   // Handler for clearing logs
   const logsClearHandler = (_req, res) => {
@@ -776,10 +776,10 @@ export function createApiRouter(
     }
   };
   // Add DELETE endpoint for clearing logs
-  router.delete('/logs', jwtAuthMiddleware, logsClearHandler);
+  router.delete('/logs', secretKeyAuthMiddleware, logsClearHandler);
 
   // Health check endpoints
-  router.get('/health', jwtAuthMiddleware, (_req, res) => {
+  router.get('/health', secretKeyAuthMiddleware, (_req, res) => {
     logger.log({ apiRoute: '/health' }, 'Health check route hit');
     const healthcheck = {
       status: 'OK',

@@ -34,7 +34,7 @@
   },
   "scripts": {
     "cli": "bun run build && node dist/index.js",
-    "build": "tsup && bun run src/scripts/copy-client-dist.ts && bun run src/scripts/copy-templates.ts && bun run src/scripts/copy-drizzle.ts",
+    "build": "tsup && bun run src/scripts/copy-templates.ts && bun run src/scripts/copy-drizzle.ts",
     "lint": "prettier --write ./src",
     "format": "prettier --write ./src",
     "format:check": "prettier --check ./src",

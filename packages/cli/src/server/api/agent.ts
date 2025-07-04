@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import type { AgentServer } from '..';
 import { upload } from '../loader';
-import { jwtAuthMiddleware } from '../middleware/auth';
+import { secretKeyAuthMiddleware } from '../middleware/auth';
 
 /**
  * Interface representing a custom request object that extends the express.Request interface.
@@ -142,7 +142,7 @@ export function agentRouter(
   });
 
   // Create new agent
-  router.post('/', async (req, res) => {
+  router.post('/', secretKeyAuthMiddleware, async (req, res) => {
     logger.debug('[AGENT CREATE] Creating new agent');
     const { characterPath, characterJson } = req.body;
 
@@ -193,7 +193,7 @@ export function agentRouter(
   });
 
   // Update agent
-  router.patch('/:agentId', async (req, res) => {
+  router.patch('/:agentId', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     if (!agentId) {
       res.status(400).json({
@@ -271,7 +271,7 @@ export function agentRouter(
   });
 
   // Stop an existing agent
-  router.put('/:agentId', async (req, res) => {
+  router.put('/:agentId', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     if (!agentId) {
       logger.debug('[AGENT STOP] Invalid agent ID format');
@@ -391,7 +391,7 @@ export function agentRouter(
   });
 
   // Delete agent
-  router.delete('/:agentId', jwtAuthMiddleware, async (req, res) => {
+  router.delete('/:agentId', secretKeyAuthMiddleware, async (req, res) => {
     logger.debug(`[AGENT DELETE] Received request to delete agent with ID: ${req.params.agentId}`);
 
     const agentId = validateUuid(req.params.agentId);
@@ -536,7 +536,7 @@ export function agentRouter(
   });
 
   // Delete Memory
-  router.delete('/:agentId/memories/:memoryId', jwtAuthMiddleware, async (req, res) => {
+  router.delete('/:agentId/memories/:memoryId', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     const memoryId = validateUuid(req.params.memoryId);
 
@@ -623,7 +623,7 @@ export function agentRouter(
     });
   });
 
-  router.delete('/:agentId/logs/:logId', jwtAuthMiddleware, async (req, res) => {
+  router.delete('/:agentId/logs/:logId', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     const logId = validateUuid(req.params.logId);
     if (!agentId || !logId) {
@@ -1422,7 +1422,7 @@ export function agentRouter(
     }
   });
 
-  router.delete('/:agentId/rooms/:roomId', jwtAuthMiddleware, async (req, res) => {
+  router.delete('/:agentId/rooms/:roomId', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     if (!agentId) {
       res.status(400).json({
@@ -1666,7 +1666,7 @@ export function agentRouter(
   });
 
   // get all memories for an agent
-  router.get('/:agentId/memories', async (req, res) => {
+  router.get('/:agentId/memories', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
 
     if (!agentId) {
@@ -1714,7 +1714,7 @@ export function agentRouter(
   });
 
   // update a specific memory for an agent
-  router.patch('/:agentId/memories/:memoryId', async (req, res) => {
+  router.patch('/:agentId/memories/:memoryId', secretKeyAuthMiddleware, async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
     const memoryId = validateUuid(req.params.memoryId);
 
@@ -1904,149 +1904,156 @@ export function agentRouter(
   });
 
   // Knowledge management routes
-  router.post('/:agentId/memories/upload-knowledge', upload.array('files'), async (req, res) => {
-    const agentId = validateUuid(req.params.agentId);
+  router.post(
+    '/:agentId/memories/upload-knowledge',
+    secretKeyAuthMiddleware,
+    upload.array('files'),
+    async (req, res) => {
+      const agentId = validateUuid(req.params.agentId);
 
-    if (!agentId) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_ID',
-          message: 'Invalid agent ID format',
-        },
-      });
-      return;
-    }
-
-    const runtime = agents.get(agentId);
-
-    if (!runtime) {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Agent not found',
-        },
-      });
-      return;
-    }
-
-    const files = req.files as Express.Multer.File[];
-
-    if (!files || files.length === 0) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'NO_FILES',
-          message: 'No files uploaded',
-        },
-      });
-      return;
-    }
-
-    try {
-      const results = [];
-
-      for (const file of files) {
-        try {
-          // Read file content
-          const content = fs.readFileSync(file.path, 'utf8');
-
-          // Format the content with Path: prefix like in the devRel/index.ts example
-          const relativePath = file.originalname;
-          const formattedContent = `Path: ${relativePath}\n\n${content}`;
-
-          // Create knowledge item with proper metadata
-          const knowledgeId = createUniqueUuid(runtime, `knowledge-${Date.now()}`);
-          const fileExt = file.originalname.split('.').pop()?.toLowerCase() || '';
-          const filename = file.originalname;
-          const title = filename.replace(`.${fileExt}`, '');
-
-          const knowledgeItem = {
-            id: knowledgeId,
-            content: {
-              text: formattedContent,
-            },
-            metadata: {
-              type: MemoryType.DOCUMENT,
-              timestamp: Date.now(),
-              filename: filename,
-              fileExt: fileExt,
-              title: title,
-              path: relativePath,
-              fileType: file.mimetype,
-              fileSize: file.size,
-              source: 'upload',
-            },
-          };
-
-          // Add knowledge to agent
-          await runtime.addKnowledge(knowledgeItem, {
-            targetTokens: 1500,
-            overlap: 200,
-            modelContextSize: 4096,
-          });
-
-          // Clean up temp file immediately after successful processing
-          if (file.path && fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
-
-          results.push({
-            id: knowledgeId,
-            filename: relativePath,
-            type: file.mimetype,
-            size: file.size,
-            uploadedAt: Date.now(),
-            preview:
-              formattedContent.length > 0
-                ? `${formattedContent.substring(0, 150)}${formattedContent.length > 150 ? '...' : ''}`
-                : 'No preview available',
-          });
-        } catch (fileError) {
-          logger.error(`[KNOWLEDGE POST] Error processing file ${file.originalname}: ${fileError}`);
-          // Clean up this file if it exists
-          if (file.path && fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
-          // Continue with other files even if one fails
-        }
+      if (!agentId) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_ID',
+            message: 'Invalid agent ID format',
+          },
+        });
+        return;
       }
 
-      res.json({
-        success: true,
-        data: results,
-      });
-    } catch (error) {
-      logger.error(`[KNOWLEDGE POST] Error uploading knowledge: ${error}`);
+      const runtime = agents.get(agentId);
 
-      // Clean up any remaining files
-      if (files) {
+      if (!runtime) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Agent not found',
+          },
+        });
+        return;
+      }
+
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'NO_FILES',
+            message: 'No files uploaded',
+          },
+        });
+        return;
+      }
+
+      try {
+        const results = [];
+
         for (const file of files) {
-          if (file.path && fs.existsSync(file.path)) {
-            try {
+          try {
+            // Read file content
+            const content = fs.readFileSync(file.path, 'utf8');
+
+            // Format the content with Path: prefix like in the devRel/index.ts example
+            const relativePath = file.originalname;
+            const formattedContent = `Path: ${relativePath}\n\n${content}`;
+
+            // Create knowledge item with proper metadata
+            const knowledgeId = createUniqueUuid(runtime, `knowledge-${Date.now()}`);
+            const fileExt = file.originalname.split('.').pop()?.toLowerCase() || '';
+            const filename = file.originalname;
+            const title = filename.replace(`.${fileExt}`, '');
+
+            const knowledgeItem = {
+              id: knowledgeId,
+              content: {
+                text: formattedContent,
+              },
+              metadata: {
+                type: MemoryType.DOCUMENT,
+                timestamp: Date.now(),
+                filename: filename,
+                fileExt: fileExt,
+                title: title,
+                path: relativePath,
+                fileType: file.mimetype,
+                fileSize: file.size,
+                source: 'upload',
+              },
+            };
+
+            // Add knowledge to agent
+            await runtime.addKnowledge(knowledgeItem, {
+              targetTokens: 1500,
+              overlap: 200,
+              modelContextSize: 4096,
+            });
+
+            // Clean up temp file immediately after successful processing
+            if (file.path && fs.existsSync(file.path)) {
               fs.unlinkSync(file.path);
-            } catch (cleanupError) {
-              logger.error(
-                `[KNOWLEDGE POST] Error cleaning up file ${file.originalname}: ${cleanupError}`
-              );
+            }
+
+            results.push({
+              id: knowledgeId,
+              filename: relativePath,
+              type: file.mimetype,
+              size: file.size,
+              uploadedAt: Date.now(),
+              preview:
+                formattedContent.length > 0
+                  ? `${formattedContent.substring(0, 150)}${formattedContent.length > 150 ? '...' : ''}`
+                  : 'No preview available',
+            });
+          } catch (fileError) {
+            logger.error(
+              `[KNOWLEDGE POST] Error processing file ${file.originalname}: ${fileError}`
+            );
+            // Clean up this file if it exists
+            if (file.path && fs.existsSync(file.path)) {
+              fs.unlinkSync(file.path);
+            }
+            // Continue with other files even if one fails
+          }
+        }
+
+        res.json({
+          success: true,
+          data: results,
+        });
+      } catch (error) {
+        logger.error(`[KNOWLEDGE POST] Error uploading knowledge: ${error}`);
+
+        // Clean up any remaining files
+        if (files) {
+          for (const file of files) {
+            if (file.path && fs.existsSync(file.path)) {
+              try {
+                fs.unlinkSync(file.path);
+              } catch (cleanupError) {
+                logger.error(
+                  `[KNOWLEDGE POST] Error cleaning up file ${file.originalname}: ${cleanupError}`
+                );
+              }
             }
           }
         }
+
+        res.status(500).json({
+          success: false,
+          error: {
+            code: 500,
+            message: 'Failed to upload knowledge',
+            details: error.message,
+          },
+        });
       }
-
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 500,
-          message: 'Failed to upload knowledge',
-          details: error.message,
-        },
-      });
     }
-  });
+  );
 
-  router.post('/groups/:serverId', jwtAuthMiddleware, async (req, res) => {
+  router.post('/groups/:serverId', secretKeyAuthMiddleware, async (req, res) => {
     const serverId = validateUuid(req.params.serverId);
 
     const { name, worldId, source, metadata, agentIds = [] } = req.body;
@@ -2135,7 +2142,7 @@ export function agentRouter(
     });
   });
 
-  router.delete('/groups/:serverId', jwtAuthMiddleware, async (req, res) => {
+  router.delete('/groups/:serverId', secretKeyAuthMiddleware, async (req, res) => {
     const serverId = validateUuid(req.params.serverId);
     try {
       await db.deleteRoomsByServerId(serverId);
