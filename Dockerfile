@@ -25,7 +25,7 @@ COPY packages ./packages
 
 RUN SKIP_POSTINSTALL=1 bun install --no-cache
 
-RUN bun run build
+RUN bun run build:server
 
 FROM node:23.3.0-slim
 

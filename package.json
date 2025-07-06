@@ -14,6 +14,7 @@
     "dev": "bun run scripts/dev-watch.js",
     "build:docs": "turbo run build --filter=@elizaos/docs",
     "build": "turbo run build --filter=!@elizaos/docs",
+    "build:server": "turbo run build --filter=@elizaos/core --filter=@elizaos/server --filter=@elizaos/api-client --filter=!@elizaos/client --filter=!@elizaos/docs && turbo run build:server --filter=@elizaos/cli",
     "build:client": "turbo run build --filter=@elizaos/client",
     "format": "turbo run format --filter=./packages/*",
     "format:check": "turbo run format:check --filter=./packages/*",
