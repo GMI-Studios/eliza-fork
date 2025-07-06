@@ -162,6 +162,7 @@ export default defineConfig(({ mode }): CustomUserConfig => {
         buffer: 'buffer',
         process: 'process/browser',
         util: 'util',
+        crypto: 'crypto-browserify',
       },
     },
     logLevel: mode === 'development' ? 'info' : 'error',
