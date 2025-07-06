@@ -3,8 +3,6 @@ import path from 'node:path';
 import { type Plugin, type UserConfig, defineConfig, loadEnv } from 'vite';
 import viteCompression from 'vite-plugin-compression';
 import tailwindcss from '@tailwindcss/vite';
-// @ts-ignore:next-line
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vite.dev/config/
 
@@ -35,7 +33,6 @@ export default defineConfig(({ mode }): CustomUserConfig => {
     plugins: [
       tailwindcss(),
       react() as unknown as Plugin,
-      nodePolyfills() as unknown as Plugin,
       viteCompression({
         algorithm: 'brotliCompress',
         ext: '.br',
@@ -93,8 +90,9 @@ export default defineConfig(({ mode }): CustomUserConfig => {
     },
     define: {
       'import.meta.env.VITE_SERVER_PORT': JSON.stringify(env.SERVER_PORT || '3000'),
-      // Add empty shims for Node.js globals
+      // Browser-safe globals
       global: 'globalThis',
+      'process.env': 'import.meta.env',
     },
     optimizeDeps: {
       esbuildOptions: {
@@ -111,22 +109,44 @@ export default defineConfig(({ mode }): CustomUserConfig => {
       cssMinify: true,
       sourcemap: true,
       rollupOptions: {
-        external: ['cloudflare:sockets'],
+        external: [
+          'cloudflare:sockets',
+          'fs',
+          'path', 
+          'crypto',
+          'stream',
+          'util',
+          'assert',
+          'events',
+          'buffer',
+          'process',
+          'unenv/polyfill/globalthis'
+        ],
         output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            // Also chunk node_modules into vendor
-            ...(id: string) => (id.includes('node_modules') ? { vendor: [id] } : undefined),
+          manualChunks: (id: string) => {
+            // Fix the manual chunks configuration
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'react-vendor';
+              }
+              if (id.includes('@radix-ui')) {
+                return 'ui-vendor';
+              }
+              return 'vendor';
+            }
           },
         },
         onwarn(warning, warn) {
           // Suppress circular dependencies and externalized warnings
           if (
             warning.code === 'CIRCULAR_DEPENDENCY' ||
+            warning.code === 'UNRESOLVED_IMPORT' ||
             (typeof warning.message === 'string' &&
               (warning.message.includes('has been externalized for browser compatibility') ||
                 warning.message.includes("The 'this' keyword is equivalent to 'undefined'") ||
-                /node:|fs|path|crypto|stream|tty|worker_threads|assert/.test(warning.message)))
+                warning.message.includes('unenv') ||
+                warning.message.includes('failed to resolve import') ||
+                /node:|fs|path|crypto|stream|tty|worker_threads|assert|buffer|process/.test(warning.message)))
           ) {
             return;
           }
@@ -138,6 +158,10 @@ export default defineConfig(({ mode }): CustomUserConfig => {
       alias: {
         '@': '/src',
         '@elizaos/core': path.resolve(__dirname, '../core/src/index.ts'),
+        // Polyfill Node.js modules for browser
+        buffer: 'buffer',
+        process: 'process/browser',
+        util: 'util',
       },
     },
     logLevel: mode === 'development' ? 'info' : 'error',
