@@ -2,6 +2,7 @@ import { UserEnvironment } from '@/src/utils';
 import { RuntimeSettings } from '@elizaos/core';
 import dotenv from 'dotenv';
 import { getLocalEnvPath, parseEnvFile } from '../../env/utils/file-operations';
+import path from 'node:path';
 
 /**
  * Load environment configuration for runtime
@@ -10,17 +11,9 @@ import { getLocalEnvPath, parseEnvFile } from '../../env/utils/file-operations';
  */
 export async function loadEnvConfig(): Promise<RuntimeSettings> {
   const envInfo = await UserEnvironment.getInstanceInfo();
-  console.log('========= envInfo', envInfo, process.env.NODE_ENV);
-  if (envInfo.paths.envFilePath) {
-    console.log('========= envInfo.paths.envFilePath', envInfo.paths.envFilePath);
-    dotenv.config({ path: envInfo.paths.envFilePath });
-    const envFileContent = await parseEnvFile(envInfo.paths.envFilePath);
-    if (envFileContent) {
-      // Merge the parsed env file content with process.env
-      console.log('========= process.env', process.env);
-      Object.assign(process.env, envFileContent);
-    }
-    console.log('========= process.env', process.env);
+  if (envInfo.paths.elizaDir) {
+    const env = path.join(envInfo.paths.elizaDir, '.env');
+    dotenv.config({ path: env });
   }
   return process.env as RuntimeSettings;
 }
