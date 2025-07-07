@@ -531,7 +531,7 @@ export class ClientBase {
       logger.info('Attempting OAuth 2.0 token refresh due to login error...');
 
       // Get OAuth 2.0 credentials for refresh
-      const refreshToken = this.runtime.getSetting('REFRESH_TOKEN');
+      const refreshToken = this.state.REFRESH_TOKEN;
       const clientId =
         this.runtime.getSetting('TWITTER_CLIENT_ID') || this.runtime.getSetting('CLIENT_ID');
       const clientSecret =
