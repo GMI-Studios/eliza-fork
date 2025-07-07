@@ -86,7 +86,7 @@ export default function PluginsPanel({
 
   // Get plugin names from available plugins
   const pluginNames = useMemo(() => {
-    const defaultPlugins = ['@elizaos/plugin-sql', '@elizaos/plugin-local-ai'];
+    const defaultPlugins = ['@elizaos/plugin-sql', '@elizaos/plugin-local-ai', '@elizaos/plugin-subagent', '@elizaos/plugin-x-subagent'];
     if (!plugins) return defaultPlugins;
     return [
       ...defaultPlugins,
@@ -279,11 +279,10 @@ export default function PluginsPanel({
                             variant="ghost"
                             size="sm"
                             key={plugin}
-                            className={`inline-flex items-center rounded-full ${
-                              isEssential
-                                ? 'bg-blue-800 text-blue-700 hover:bg-blue-600'
-                                : 'bg-primary/10 text-primary hover:bg-primary/20'
-                            } px-2.5 py-0.5 text-xs font-medium h-auto`}
+                            className={`inline-flex items-center rounded-full ${isEssential
+                              ? 'bg-blue-800 text-blue-700 hover:bg-blue-600'
+                              : 'bg-primary/10 text-primary hover:bg-primary/20'
+                              } px-2.5 py-0.5 text-xs font-medium h-auto`}
                             title={
                               isRequiredByVoice
                                 ? 'Required by voice model'

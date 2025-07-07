@@ -107,6 +107,7 @@ export function usePlugins() {
           '@elizaos/plugin-browser',
           '@elizaos/plugin-farcaster',
           '@elizaos/plugin-groq',
+          '@elizaos/plugin-subagent',
         ]
           .filter((name) => name.includes('plugin'))
           .sort();
