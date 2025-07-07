@@ -10,7 +10,9 @@ import { getLocalEnvPath, parseEnvFile } from '../../env/utils/file-operations';
  */
 export async function loadEnvConfig(): Promise<RuntimeSettings> {
   const envInfo = await UserEnvironment.getInstanceInfo();
+  console.log('========= envInfo', envInfo);
   if (envInfo.paths.envFilePath) {
+    console.log('========= envInfo.paths.envFilePath', envInfo.paths.envFilePath);
     dotenv.config({ path: envInfo.paths.envFilePath });
   }
   return process.env as RuntimeSettings;
