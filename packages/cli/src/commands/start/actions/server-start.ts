@@ -39,7 +39,12 @@ export async function startAgents(options: ServerStartOptions): Promise<void> {
     logger.warn(`Port ${desiredPort} is in use, using port ${serverPort} instead`);
   }
   process.env.SERVER_PORT = serverPort.toString();
+  
   server.start(serverPort);
+  
+  // 🎯 Log TWITTER_CLIENT_ID after server starts
+  logger.info(`🐦 TWITTER_CLIENT_ID: ${process.env.TWITTER_CLIENT_ID || 'Not set'}`);
+  console.log(`\x1b[36m🔍 Environment Check - TWITTER_CLIENT_ID: ${process.env.TWITTER_CLIENT_ID || 'NOT_SET'}\x1b[0m`);
 
   // If we have project agents, start them with their init functions
   if (options.projectAgents && options.projectAgents.length > 0) {
