@@ -185,7 +185,9 @@ export class ClientBase {
       return cachedTweet;
     }
 
-    const tweet = await this.requestQueue.add(() => this.twitterClient.getTweet(tweetId));
+    const tweet = await this.requestQueue.add(() =>
+      this.makeAuthenticatedRequest(() => this.twitterClient.getTweet(tweetId))
+    );
 
     await this.cacheTweet(tweet);
     return tweet;
@@ -553,6 +555,7 @@ export class ClientBase {
         return null;
       }
 
+      logger.info('newTokens', newTokens);
       // Update agent secrets with new tokens
       await this.updateAgentSecrets({
         BEARER_TOKEN: newTokens.accessToken,

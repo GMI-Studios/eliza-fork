@@ -8,11 +8,11 @@ import {
   type UUID,
   createUniqueUuid,
   logger,
-} from "@elizaos/core";
-import type { ClientBase } from "./base";
-import type { MediaData } from "./types";
-import { TwitterEventTypes } from "./types";
-import { sendTweet } from "./utils";
+} from '@elizaos/core';
+import type { ClientBase } from './base';
+import type { MediaData } from './types';
+import { TwitterEventTypes } from './types';
+import { sendTweet } from './utils';
 /**
  * Class representing a Twitter post client for generating and posting tweets.
  */
@@ -33,28 +33,30 @@ export class TwitterPostClient {
     this.client = client;
     this.state = state;
     this.runtime = runtime;
-    const dryRunSetting = this.state?.TWITTER_DRY_RUN ?? this.runtime.getSetting("TWITTER_DRY_RUN");
-    this.isDryRun = dryRunSetting === true || dryRunSetting === "true" || 
-                    (typeof dryRunSetting === "string" && dryRunSetting.toLowerCase() === "true");
+    const dryRunSetting = this.state?.TWITTER_DRY_RUN ?? this.runtime.getSetting('TWITTER_DRY_RUN');
+    this.isDryRun =
+      dryRunSetting === true ||
+      dryRunSetting === 'true' ||
+      (typeof dryRunSetting === 'string' && dryRunSetting.toLowerCase() === 'true');
 
     // Log configuration on initialization
-    logger.log("Twitter Client Configuration:");
-    logger.log(`- Dry Run Mode: ${this.isDryRun ? "Enabled" : "Disabled"}`);
+    logger.log('Twitter Client Configuration:');
+    logger.log(`- Dry Run Mode: ${this.isDryRun ? 'Enabled' : 'Disabled'}`);
 
     logger.log(
-      `- Post Interval: ${this.state?.TWITTER_POST_INTERVAL_MIN || this.runtime.getSetting("TWITTER_POST_INTERVAL_MIN") || 90}-${this.state?.TWITTER_POST_INTERVAL_MAX || this.runtime.getSetting("TWITTER_POST_INTERVAL_MAX") || 180} minutes`,
+      `- Post Interval: ${this.state?.TWITTER_POST_INTERVAL_MIN || this.runtime.getSetting('TWITTER_POST_INTERVAL_MIN') || 90}-${this.state?.TWITTER_POST_INTERVAL_MAX || this.runtime.getSetting('TWITTER_POST_INTERVAL_MAX') || 180} minutes`
     );
-    const postImmediatelySetting = this.state?.TWITTER_POST_IMMEDIATELY ?? this.runtime.getSetting("TWITTER_POST_IMMEDIATELY");
-    const isPostImmediately = postImmediatelySetting === true || postImmediatelySetting === "true" || 
-                             (typeof postImmediatelySetting === "string" && postImmediatelySetting.toLowerCase() === "true");
-    logger.log(
-      `- Post Immediately: ${isPostImmediately ? "enabled" : "disabled"}`,
-    );
+    const postImmediatelySetting =
+      this.state?.TWITTER_POST_IMMEDIATELY ?? this.runtime.getSetting('TWITTER_POST_IMMEDIATELY');
+    const isPostImmediately =
+      postImmediatelySetting === true ||
+      postImmediatelySetting === 'true' ||
+      (typeof postImmediatelySetting === 'string' &&
+        postImmediatelySetting.toLowerCase() === 'true');
+    logger.log(`- Post Immediately: ${isPostImmediately ? 'enabled' : 'disabled'}`);
 
     if (this.isDryRun) {
-      logger.log(
-        "Twitter client initialized in dry run mode - no actual tweets should be posted",
-      );
+      logger.log('Twitter client initialized in dry run mode - no actual tweets should be posted');
     }
   }
 
@@ -62,20 +64,19 @@ export class TwitterPostClient {
    * Starts the Twitter post client, setting up a loop to periodically generate new tweets.
    */
   async start() {
-    logger.log("Starting Twitter post client...");
+    logger.log('Starting Twitter post client...');
 
     const generateNewTweetLoop = async () => {
       const minPostMinutes =
         this.state?.TWITTER_POST_INTERVAL_MIN ||
-        this.runtime.getSetting("TWITTER_POST_INTERVAL_MIN") ||
+        this.runtime.getSetting('TWITTER_POST_INTERVAL_MIN') ||
         90;
       const maxPostMinutes =
         this.state?.TWITTER_POST_INTERVAL_MAX ||
-        this.runtime.getSetting("TWITTER_POST_INTERVAL_MAX") ||
+        this.runtime.getSetting('TWITTER_POST_INTERVAL_MAX') ||
         180;
       const randomMinutes =
-        Math.floor(Math.random() * (maxPostMinutes - minPostMinutes + 1)) +
-        minPostMinutes;
+        Math.floor(Math.random() * (maxPostMinutes - minPostMinutes + 1)) + minPostMinutes;
       const interval = randomMinutes * 60 * 1000;
 
       await this.generateNewTweet();
@@ -84,10 +85,13 @@ export class TwitterPostClient {
 
     // Start the loop after a 1 minute delay to allow other services to initialize
     setTimeout(generateNewTweetLoop, 60 * 1000);
-    const postImmediately = this.state?.TWITTER_POST_IMMEDIATELY ?? this.runtime.getSetting("TWITTER_POST_IMMEDIATELY");
-    const shouldPostImmediately = postImmediately === true || postImmediately === "true" || 
-                                  (typeof postImmediately === "string" && postImmediately.toLowerCase() === "true");
-    
+    const postImmediately =
+      this.state?.TWITTER_POST_IMMEDIATELY ?? this.runtime.getSetting('TWITTER_POST_IMMEDIATELY');
+    const shouldPostImmediately =
+      postImmediately === true ||
+      postImmediately === 'true' ||
+      (typeof postImmediately === 'string' && postImmediately.toLowerCase() === 'true');
+
     if (shouldPostImmediately) {
       // await 1 second
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -100,13 +104,13 @@ export class TwitterPostClient {
    * This approach aligns with our platform-independent architecture.
    */
   async generateNewTweet() {
-    logger.info("Attempting to generate new tweet...");
-    
+    logger.info('Attempting to generate new tweet...');
+
     try {
       // Create the timeline room ID for storing the post
       const userId = this.client.profile?.id;
       if (!userId) {
-        logger.error("Cannot generate tweet: Twitter profile not available");
+        logger.error('Cannot generate tweet: Twitter profile not available');
         return;
       }
 
@@ -115,33 +119,30 @@ export class TwitterPostClient {
       // Create standardized world and room IDs
       const worldId = createUniqueUuid(this.runtime, userId) as UUID;
       const roomId = createUniqueUuid(this.runtime, `${userId}-home`) as UUID;
-      
+
       // Create a callback for handling the actual posting
       const callback: HandlerCallback = async (content: Content) => {
-        logger.info("Tweet generation callback triggered");
-        
+        logger.info('Tweet generation callback triggered');
+
         try {
           if (this.isDryRun) {
             logger.info(`[DRY RUN] Would post tweet: ${content.text}`);
             return [];
           }
 
-          if (content.text.includes("Error: Missing")) {
-            logger.error("Error: Missing some context", content);
+          if (content.text.includes('Error: Missing')) {
+            logger.error('Error: Missing some context', content);
             return [];
           }
 
           logger.info(`Posting tweet: ${content.text}`);
 
           // Post the tweet
-          const result = await this.postToTwitter(
-            content.text,
-            content.mediaData as MediaData[],
-          );
+          const result = await this.postToTwitter(content.text, content.mediaData as MediaData[]);
 
           // If result is null, it means we detected a duplicate tweet and skipped posting
           if (result === null) {
-            logger.info("Skipped posting duplicate tweet");
+            logger.info('Skipped posting duplicate tweet');
             return [];
           }
 
@@ -159,9 +160,9 @@ export class TwitterPostClient {
               roomId,
               content: {
                 ...content,
-                source: "twitter",
+                source: 'twitter',
                 channelType: ChannelType.FEED,
-                type: "post",
+                type: 'post',
                 metadata: {
                   tweetId,
                   postedAt: Date.now(),
@@ -170,36 +171,33 @@ export class TwitterPostClient {
               createdAt: Date.now(),
             };
 
-            await this.runtime.createMemory(postedMemory, "messages");
+            await this.runtime.createMemory(postedMemory, 'messages');
 
             return [postedMemory];
           }
 
           return [];
         } catch (error) {
-          logger.error("Error posting tweet:", error, content);
+          logger.error('Error posting tweet:', error, content);
           return [];
         }
       };
 
-      logger.info("Emitting POST_GENERATED event to trigger content generation...");
-      
+      logger.info('Emitting POST_GENERATED event to trigger content generation...');
+
       // Emit event to handle the post generation using standard handlers
-      this.runtime.emitEvent(
-        [EventType.POST_GENERATED, TwitterEventTypes.POST_GENERATED],
-        {
-          runtime: this.runtime,
-          callback,
-          worldId,
-          userId,
-          roomId,
-          source: "twitter",
-        },
-      );
-      
-      logger.info("POST_GENERATED event emitted successfully");
+      this.runtime.emitEvent([EventType.POST_GENERATED, TwitterEventTypes.POST_GENERATED], {
+        runtime: this.runtime,
+        callback,
+        worldId,
+        userId,
+        roomId,
+        source: 'twitter',
+      });
+
+      logger.info('POST_GENERATED event emitted successfully');
     } catch (error) {
-      logger.error("Error generating tweet:", error);
+      logger.error('Error generating tweet:', error);
     }
   }
 
@@ -209,22 +207,17 @@ export class TwitterPostClient {
    * @param {MediaData[]} mediaData Optional media to attach to the tweet
    * @returns {Promise<any>} The result from the Twitter API
    */
-  private async postToTwitter(
-    text: string,
-    mediaData: MediaData[] = [],
-  ): Promise<any> {
+  private async postToTwitter(text: string, mediaData: MediaData[] = []): Promise<any> {
     try {
       // Check if this tweet is a duplicate of the last one
       const lastPost = await this.runtime.getCache<any>(
-        `twitter/${this.client.profile?.username}/lastPost`,
+        `twitter/${this.client.profile?.username}/lastPost`
       );
       if (lastPost) {
         // Fetch the last tweet to compare content
         const lastTweet = await this.client.getTweet(lastPost.id);
         if (lastTweet && lastTweet.text === text) {
-          logger.warn(
-            "Tweet is a duplicate of the last post. Skipping to avoid duplicate.",
-          );
+          logger.warn('Tweet is a duplicate of the last post. Skipping to avoid duplicate.');
           return null;
         }
       }
@@ -237,11 +230,9 @@ export class TwitterPostClient {
           try {
             // TODO: Media upload will need to be updated to use the new API
             // For now, just log a warning that media upload is not supported
-            logger.warn(
-              "Media upload not currently supported with the modern Twitter API",
-            );
+            logger.warn('Media upload not currently supported with the modern Twitter API');
           } catch (error) {
-            logger.error("Error uploading media:", error);
+            logger.error('Error uploading media:', error);
           }
         }
       }
@@ -249,13 +240,13 @@ export class TwitterPostClient {
       const result = await sendTweet(this.client, text, mediaData);
 
       if (!result) {
-        logger.error("Error sending tweet; Bad response:");
+        logger.error('Error sending tweet; Bad response:');
         return null;
       }
 
       return result;
     } catch (error) {
-      logger.error("Error posting to Twitter:", error);
+      logger.error('Error posting to Twitter:', error);
       throw error;
     }
   }
