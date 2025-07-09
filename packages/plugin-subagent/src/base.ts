@@ -185,9 +185,11 @@ export class ClientBase {
       return cachedTweet;
     }
 
-    const tweet = await this.requestQueue.add(() =>
-      this.makeAuthenticatedRequest(() => this.twitterClient.getTweet(tweetId))
-    );
+    // const tweet = await this.requestQueue.add(() =>
+    //   this.makeAuthenticatedRequest(() => this.twitterClient.getTweet(tweetId))
+    // );
+
+    const tweet = await this.twitterClient.getTweet(tweetId);
 
     await this.cacheTweet(tweet);
     return tweet;
@@ -247,6 +249,7 @@ export class ClientBase {
   async makeAuthenticatedRequest<T>(operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
+      // throw new Error('401');
     } catch (error) {
       if (error instanceof Error) {
         // Check if it's an authentication error
@@ -307,7 +310,7 @@ export class ClientBase {
       throw new Error('BEARER_TOKEN and REFRESH_TOKEN are required');
     }
 
-    const maxRetries = process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES) : 3;
+    const maxRetries = process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES) : 2;
     let retryCount = 0;
     let lastError: Error | null = null;
     let tokenRefreshAttempted = false;
@@ -632,7 +635,7 @@ export class ClientBase {
         logger.error('Token refresh response missing access_token');
         return null;
       }
-
+      logger.info('tokenData', tokenData);
       logger.info('OAuth 2.0 token refresh successful');
       return {
         accessToken: tokenData.access_token,
@@ -658,62 +661,24 @@ export class ClientBase {
       logger.debug(`Updated secret: ${key}`);
     }
 
+    // Prepare the settings update with secrets properly nested
+    const settingsUpdate = {
+      settings: {
+        secrets: secrets,
+      },
+    };
+
     // Immediately persist the character changes to database
-    await this.saveCharacterSettings();
+    const success = await this.runtime.updateAgent(this.runtime.agentId, settingsUpdate);
 
-    logger.info(`Successfully updated and persisted ${Object.keys(secrets).length} agent secrets`);
-  }
-
-  /**
-   * Save character settings immediately to the database
-   * This persists any changes made via setSetting to the database
-   */
-  private async saveCharacterSettings(): Promise<void> {
-    try {
-      logger.debug('Persisting character settings to database...');
-
-      // Get the current character data
-      const character = this.runtime.character;
-
-      // Create agent update data with timestamps
-      const agentUpdate = {
-        ...character,
-        updatedAt: Date.now(),
-      };
-
-      // Persist to database using the runtime's updateAgent method
-      const success = await this.runtime.updateAgent(this.runtime.agentId, agentUpdate);
-
-      if (success) {
-        logger.debug('Character settings successfully persisted to database');
-      } else {
-        logger.warn('Failed to persist character settings to database');
-      }
-    } catch (error) {
-      logger.error('Error persisting character settings to database:', error);
-      // Don't throw here - token refresh should continue even if persistence fails
+    if (success) {
+      logger.info(
+        `Successfully updated and persisted ${Object.keys(secrets).length} agent secrets`
+      );
+    } else {
+      logger.error('Failed to persist agent secrets to database');
+      throw new Error('Failed to persist agent secrets to database');
     }
-  }
-
-  /**
-   * Set a setting and immediately save it to the database
-   * @param key Setting key
-   * @param value Setting value
-   * @param secret Whether this is a secret setting
-   * @returns Promise that resolves when setting is saved
-   */
-  async setAndSaveSetting(
-    key: string,
-    value: string | boolean | null | any,
-    secret = false
-  ): Promise<void> {
-    // Update the setting in memory
-    this.runtime.setSetting(key, value, secret);
-
-    // Immediately persist to database
-    await this.saveCharacterSettings();
-
-    logger.debug(`Setting '${key}' updated and persisted to database`);
   }
 
   private async populateTimeline() {

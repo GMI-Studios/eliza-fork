@@ -52,11 +52,8 @@ logger.debug(`Subagent plugin module loaded - Service name: ${TWITTER_SERVICE_NA
  *    - Retries the original operation with refreshed authentication
  *    - Logs all refresh attempts and outcomes for debugging
  *
- * 4. For manual setting updates with immediate persistence:
- *    const client = new ClientBase(runtime, state);
- *    await client.setAndSaveSetting('BEARER_TOKEN', newToken, true);
- *
- * No manual token management required - just use the client methods normally!
+ * 4. Token persistence is handled automatically during the refresh process.
+ *    No manual token management required - just use the client methods normally!
  */
 
 /**
