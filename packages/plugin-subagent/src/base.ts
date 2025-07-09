@@ -141,6 +141,11 @@ export class ClientBase {
 
   profile: TwitterProfile | null;
 
+  // Token refresh management
+  private tokenRefreshInterval: NodeJS.Timeout | null = null;
+  private readonly TOKEN_REFRESH_INTERVAL_MS = 100 * 60 * 1000; // 100 minutes
+  private isRefreshing = false;
+
   /**
    * Caches a tweet in the database.
    *
@@ -237,6 +242,174 @@ export class ClientBase {
   }
 
   /**
+   * Immediately refresh tokens on login and start the refresh loop
+   */
+  private async refreshTokensImmediately(): Promise<void> {
+    try {
+      logger.info('Performing immediate token refresh on login...');
+      const refreshedTokens = await this.refreshTokensOnLoginError();
+
+      if (refreshedTokens) {
+        // Update local state with new tokens
+        this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
+        this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
+
+        // Re-authenticate the Twitter client with new tokens
+        if (this.twitterClient) {
+          try {
+            await this.twitterClient.login(
+              refreshedTokens.bearerToken,
+              refreshedTokens.refreshToken
+            );
+            logger.info('Twitter client re-authenticated with refreshed tokens');
+          } catch (loginError) {
+            logger.warn(
+              'Failed to re-authenticate Twitter client with refreshed tokens:',
+              loginError
+            );
+          }
+        }
+
+        logger.info('Immediate token refresh completed successfully');
+      } else {
+        logger.warn('Immediate token refresh failed, continuing with existing tokens');
+      }
+    } catch (error) {
+      logger.error('Error during immediate token refresh:', error);
+    }
+  }
+
+  /**
+   * Start the token refresh loop that runs every 10 minutes
+   */
+  private startTokenRefreshLoop(): void {
+    if (this.tokenRefreshInterval) {
+      logger.info('Token refresh loop already running, clearing existing interval');
+      clearInterval(this.tokenRefreshInterval);
+    }
+
+    logger.info('Starting token refresh loop (every 100 minutes)');
+
+    this.tokenRefreshInterval = setInterval(async () => {
+      if (this.isRefreshing) {
+        logger.debug('Token refresh already in progress, skipping this cycle');
+        return;
+      }
+
+      try {
+        this.isRefreshing = true;
+        logger.info('Performing scheduled token refresh...');
+
+        const refreshedTokens = await this.refreshTokensOnLoginError();
+
+        if (refreshedTokens) {
+          // Update local state with new tokens
+          this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
+          this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
+
+          // Re-authenticate the Twitter client with new tokens
+          if (this.twitterClient) {
+            try {
+              await this.twitterClient.login(
+                refreshedTokens.bearerToken,
+                refreshedTokens.refreshToken
+              );
+              logger.info('Twitter client re-authenticated with refreshed tokens');
+            } catch (loginError) {
+              logger.warn(
+                'Failed to re-authenticate Twitter client with refreshed tokens:',
+                loginError
+              );
+            }
+          }
+
+          logger.info('Scheduled token refresh completed successfully');
+        } else {
+          logger.warn('Scheduled token refresh failed, continuing with existing tokens');
+        }
+      } catch (error) {
+        logger.error('Error during scheduled token refresh:', error);
+      } finally {
+        this.isRefreshing = false;
+      }
+    }, this.TOKEN_REFRESH_INTERVAL_MS);
+  }
+
+  /**
+   * Stop the token refresh loop
+   */
+  private stopTokenRefreshLoop(): void {
+    if (this.tokenRefreshInterval) {
+      logger.info('Stopping token refresh loop');
+      clearInterval(this.tokenRefreshInterval);
+      this.tokenRefreshInterval = null;
+    }
+  }
+
+  /**
+   * Cleanup method to stop the token refresh loop
+   */
+  public cleanup(): void {
+    this.stopTokenRefreshLoop();
+  }
+
+  /**
+   * Manually trigger a token refresh (useful for testing)
+   */
+  public async manualTokenRefresh(): Promise<boolean> {
+    try {
+      logger.info('Manual token refresh triggered');
+      const refreshedTokens = await this.refreshTokensOnLoginError();
+
+      if (refreshedTokens) {
+        // Update local state with new tokens
+        this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
+        this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
+
+        // Re-authenticate the Twitter client with new tokens
+        if (this.twitterClient) {
+          try {
+            await this.twitterClient.login(
+              refreshedTokens.bearerToken,
+              refreshedTokens.refreshToken
+            );
+            logger.info('Twitter client re-authenticated with refreshed tokens');
+          } catch (loginError) {
+            logger.warn(
+              'Failed to re-authenticate Twitter client with refreshed tokens:',
+              loginError
+            );
+          }
+        }
+
+        logger.info('Manual token refresh completed successfully');
+        return true;
+      } else {
+        logger.warn('Manual token refresh failed');
+        return false;
+      }
+    } catch (error) {
+      logger.error('Error during manual token refresh:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get the status of the token refresh loop
+   */
+  public getTokenRefreshStatus(): {
+    isRunning: boolean;
+    isRefreshing: boolean;
+    intervalMs: number;
+  } {
+    return {
+      isRunning: this.tokenRefreshInterval !== null,
+      isRefreshing: this.isRefreshing,
+      intervalMs: this.TOKEN_REFRESH_INTERVAL_MS,
+    };
+  }
+
+  /**
    * Example method showing how to use token refresh for Twitter API calls
    * @param operation The Twitter API operation to perform
    * @returns The result of the operation
@@ -322,6 +495,7 @@ export class ClientBase {
 
         if (await this.twitterClient.isLoggedIn()) {
           logger.info('Successfully authenticated with Twitter API v2');
+
           break;
         } else {
           throw new Error('Failed to authenticate with Twitter API v2');
@@ -416,6 +590,12 @@ export class ClientBase {
     } else {
       throw new Error('Failed to load profile');
     }
+
+    // Perform immediate token refresh on successful login
+    await this.refreshTokensImmediately();
+
+    // Start the token refresh loop
+    this.startTokenRefreshLoop();
 
     // await this.loadLatestCheckedTweetId();
     // await this.populateTimeline();
