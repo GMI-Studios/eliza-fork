@@ -67,14 +67,16 @@ export class TwitterPostClient {
     logger.log('Starting Twitter post client...');
 
     const generateNewTweetLoop = async () => {
-      const minPostMinutes =
+      const minPostMinutes = Number(
         this.state?.TWITTER_POST_INTERVAL_MIN ||
-        this.runtime.getSetting('TWITTER_POST_INTERVAL_MIN') ||
-        90;
-      const maxPostMinutes =
+          this.runtime.getSetting('TWITTER_POST_INTERVAL_MIN') ||
+          90
+      );
+      const maxPostMinutes = Number(
         this.state?.TWITTER_POST_INTERVAL_MAX ||
-        this.runtime.getSetting('TWITTER_POST_INTERVAL_MAX') ||
-        180;
+          this.runtime.getSetting('TWITTER_POST_INTERVAL_MAX') ||
+          180
+      );
       const randomMinutes =
         Math.floor(Math.random() * (maxPostMinutes - minPostMinutes + 1)) + minPostMinutes;
       let interval = randomMinutes * 60 * 1000;
@@ -87,6 +89,7 @@ export class TwitterPostClient {
         randomMinutes
       );
 
+      // fallback
       if (interval > 7200000) {
         logger.info('Posting tweet in 2 hours');
         interval = 7200000;
