@@ -498,7 +498,6 @@ export class ClientBase {
     // await this.runtime.ensureAgentExists(this.runtime.character);
     let bearerToken = this.state?.BEARER_TOKEN;
     let refreshToken = this.state?.REFRESH_TOKEN;
-    logger.info('BEARER_TOKEN', bearerToken);
     if (!bearerToken || !refreshToken) {
       throw new Error('BEARER_TOKEN and REFRESH_TOKEN are required');
     }
