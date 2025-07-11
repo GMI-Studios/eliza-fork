@@ -78,7 +78,14 @@ export class TwitterPostClient {
       const randomMinutes =
         Math.floor(Math.random() * (maxPostMinutes - minPostMinutes + 1)) + minPostMinutes;
       const interval = randomMinutes * 60 * 1000;
-
+      logger.info(
+        'Posting tweet in',
+        interval,
+        'ms',
+        minPostMinutes,
+        maxPostMinutes,
+        randomMinutes
+      );
       await this.generateNewTweet();
       setTimeout(generateNewTweetLoop, interval);
     };
