@@ -254,8 +254,8 @@ export class ClientBase {
         this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
         this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
 
-        // Re-authenticate the Twitter client with new tokens
-        if (this.twitterClient) {
+        // Only try to re-authenticate if we have a valid bearer token
+        if (refreshedTokens.bearerToken && this.twitterClient) {
           try {
             await this.twitterClient.login(
               refreshedTokens.bearerToken,
@@ -268,9 +268,15 @@ export class ClientBase {
               loginError
             );
           }
+        } else if (!refreshedTokens.bearerToken) {
+          logger.warn('Bearer token is null after immediate refresh, skipping re-authentication');
         }
 
-        logger.info('Immediate token refresh completed successfully');
+        if (refreshedTokens.bearerToken) {
+          logger.info('Immediate token refresh completed successfully');
+        } else {
+          logger.info('Immediate token refresh completed but bearer token is null');
+        }
       } else {
         logger.warn('Immediate token refresh failed, continuing with existing tokens');
       }
@@ -307,8 +313,8 @@ export class ClientBase {
           this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
           this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
 
-          // Re-authenticate the Twitter client with new tokens
-          if (this.twitterClient) {
+          // Only try to re-authenticate if we have a valid bearer token
+          if (refreshedTokens.bearerToken && this.twitterClient) {
             try {
               await this.twitterClient.login(
                 refreshedTokens.bearerToken,
@@ -321,9 +327,15 @@ export class ClientBase {
                 loginError
               );
             }
+          } else if (!refreshedTokens.bearerToken) {
+            logger.warn('Bearer token is null after scheduled refresh, skipping re-authentication');
           }
 
-          logger.info('Scheduled token refresh completed successfully');
+          if (refreshedTokens.bearerToken) {
+            logger.info('Scheduled token refresh completed successfully');
+          } else {
+            logger.info('Scheduled token refresh completed but bearer token is null');
+          }
         } else {
           logger.warn('Scheduled token refresh failed, continuing with existing tokens');
         }
@@ -366,8 +378,8 @@ export class ClientBase {
         this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
         this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
 
-        // Re-authenticate the Twitter client with new tokens
-        if (this.twitterClient) {
+        // Only try to re-authenticate if we have a valid bearer token
+        if (refreshedTokens.bearerToken && this.twitterClient) {
           try {
             await this.twitterClient.login(
               refreshedTokens.bearerToken,
@@ -380,9 +392,15 @@ export class ClientBase {
               loginError
             );
           }
+        } else if (!refreshedTokens.bearerToken) {
+          logger.warn('Bearer token is null after manual refresh, skipping re-authentication');
         }
 
-        logger.info('Manual token refresh completed successfully');
+        if (refreshedTokens.bearerToken) {
+          logger.info('Manual token refresh completed successfully');
+        } else {
+          logger.info('Manual token refresh completed but bearer token is null');
+        }
         return true;
       } else {
         logger.warn('Manual token refresh failed');
@@ -436,8 +454,8 @@ export class ClientBase {
               this.state.BEARER_TOKEN = refreshedTokens.bearerToken;
               this.state.REFRESH_TOKEN = refreshedTokens.refreshToken;
 
-              // Re-initialize the Twitter client with new tokens if needed
-              if (this.twitterClient) {
+              // Only try to re-authenticate if we have a valid bearer token
+              if (refreshedTokens.bearerToken && this.twitterClient) {
                 try {
                   await this.twitterClient.login(
                     refreshedTokens.bearerToken,
@@ -451,10 +469,12 @@ export class ClientBase {
                   );
                   // Continue anyway, the operation might still work
                 }
+              } else if (!refreshedTokens.bearerToken) {
+                logger.warn('Bearer token is null after refresh, skipping re-authentication');
               }
 
               // Retry the original operation with refreshed authentication
-              logger.info('Retrying operation after successful token refresh...');
+              logger.info('Retrying operation after token refresh...');
               return await operation();
             } else {
               throw new Error(
@@ -521,7 +541,11 @@ export class ClientBase {
               this.state.REFRESH_TOKEN = refreshToken;
 
               tokenRefreshAttempted = true;
-              logger.info('Token refresh successful, retrying login...');
+              if (bearerToken) {
+                logger.info('Token refresh successful, retrying login...');
+              } else {
+                logger.info('Token refresh completed but bearer token is null, retrying login...');
+              }
               continue; // Retry immediately with new tokens
             }
           } catch (refreshError) {
@@ -734,8 +758,18 @@ export class ClientBase {
       const newTokens = await this.performTokenRefresh(refreshToken, clientId, clientSecret);
 
       if (!newTokens) {
-        logger.error('Token refresh returned null');
-        return null;
+        logger.error('Token refresh returned null, saving bearer token as null');
+        // Update agent secrets with null bearer token
+        await this.updateAgentSecrets({
+          BEARER_TOKEN: null,
+          REFRESH_TOKEN: refreshToken, // Keep existing refresh token
+        });
+
+        logger.info('Saved null bearer token due to failed refresh');
+        return {
+          bearerToken: null,
+          refreshToken: refreshToken,
+        };
       }
 
       logger.info('newTokens', newTokens);
@@ -815,7 +849,6 @@ export class ClientBase {
         logger.error('Token refresh response missing access_token');
         return null;
       }
-      logger.info('tokenData', tokenData);
       logger.info('OAuth 2.0 token refresh successful');
       return {
         accessToken: tokenData.access_token,
@@ -830,15 +863,15 @@ export class ClientBase {
 
   /**
    * Update agent secrets with new token values
-   * @param secrets Object containing secret key-value pairs to update
+   * @param secrets Object containing secret key-value pairs to update (values can be null)
    */
-  private async updateAgentSecrets(secrets: Record<string, string>): Promise<void> {
+  private async updateAgentSecrets(secrets: Record<string, string | null>): Promise<void> {
     logger.info('Updating agent secrets with refreshed tokens');
 
     // Update each secret individually using the secret flag
     for (const [key, value] of Object.entries(secrets)) {
       this.runtime.setSetting(key, value, true); // true = store as secret
-      logger.debug(`Updated secret: ${key}`);
+      logger.debug(`Updated secret: ${key} = ${value === null ? 'null' : '[REDACTED]'}`);
     }
 
     // Prepare the settings update with secrets properly nested
