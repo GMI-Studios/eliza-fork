@@ -80,20 +80,6 @@ export class TwitterPostClient {
       const randomMinutes =
         Math.floor(Math.random() * (maxPostMinutes - minPostMinutes + 1)) + minPostMinutes;
       let interval = randomMinutes * 60 * 1000;
-      logger.info(
-        'Posting tweet in',
-        interval,
-        'ms',
-        minPostMinutes,
-        maxPostMinutes,
-        randomMinutes
-      );
-
-      // fallback
-      if (interval > 7200000) {
-        logger.info('Posting tweet in 2 hours');
-        interval = 7200000;
-      }
 
       await this.generateNewTweet();
       setTimeout(generateNewTweetLoop, interval);
